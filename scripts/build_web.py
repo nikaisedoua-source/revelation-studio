@@ -3,9 +3,9 @@ import json,re,shutil,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from app import cinema,catalog,providers
-VERSION='0.8.0'
+VERSION='0.9.0'
 DEST=ROOT/'web-online/dist';DEST.mkdir(parents=True,exist_ok=True)
-for name in ['studio.js','studio.css','film.js','integrations.js','return-to-studio.js','editor-model.js','editor.js','editor.css']:
+for name in ['studio.js','studio.css','film.js','integrations.js','return-to-studio.js','editor-model.js','editor.js','editor.css','studio-pro.css','photo.css','photo-editor.js','shell.js']:
  text=(ROOT/'web'/name).read_text().replace('/Users/decassan/Documents/Révélation Studio','Compagnon Mac').replace('/Volumes/Samsung T7/IA_STUDIO_2026','Stockage du compagnon Mac')
  (DEST/name).write_text(text)
 for name in ['browser-engine.js','browser-extras.js','cloud-runtime.js','sw.js','manifest.webmanifest','icon.svg','icon-180.png','icon-192.png','icon-512.png']:
@@ -17,7 +17,7 @@ html=html.replace('</head>','<link rel="manifest" href="./manifest.webmanifest">
 (DEST/'index.html').write_text(html)
 (DEST/'public-data.json').write_text(json.dumps({'version':VERSION,'charter':cinema.CHARTER,'sources':cinema.SOURCES,'catalog':catalog.catalog(),'connectors':{k:v for k,v in providers.CONNECTORS.items() if v['kind']!='auth'}},ensure_ascii=False))
 (DEST/'version.json').write_text(json.dumps({'version':VERSION,'edition':'browser','private_media_included':False}))
-allowed={'index.html','studio.js','studio.css','film.js','integrations.js','return-to-studio.js','editor-model.js','editor.js','editor.css','browser-engine.js','browser-extras.js','cloud-runtime.js','sw.js','manifest.webmanifest','icon.svg','icon-180.png','icon-192.png','icon-512.png','public-data.json','version.json'}
+allowed={'index.html','studio.js','studio.css','film.js','integrations.js','return-to-studio.js','editor-model.js','editor.js','editor.css','studio-pro.css','photo.css','photo-editor.js','shell.js','browser-engine.js','browser-extras.js','cloud-runtime.js','sw.js','manifest.webmanifest','icon.svg','icon-180.png','icon-192.png','icon-512.png','public-data.json','version.json'}
 actual={p.name for p in DEST.iterdir()}
 if actual!=allowed:raise SystemExit('Unexpected deploy files: '+str(actual^allowed))
 for p in DEST.iterdir():

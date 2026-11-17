@@ -46,6 +46,17 @@
     return Math.min(high, Math.max(low, value));
   }
 
+  function normalizeGrade(input) {
+    const grade = input && typeof input === 'object' ? input : {};
+    const value = (name) => (isFiniteNumber(grade[name]) ? clamp(grade[name], -100, 100) : 0);
+    return {
+      exposure: value('exposure'),
+      contrast: value('contrast'),
+      saturation: value('saturation'),
+      temperature: value('temperature')
+    };
+  }
+
   function trackKindForClip(kind) {
     return kind === 'audio' ? 'audio' : 'video';
   }
@@ -204,7 +215,8 @@
       mediaDuration,
       opacity: isFiniteNumber(input.opacity) ? clamp(input.opacity, 0, 1) : 1,
       volume: isFiniteNumber(input.volume) ? clamp(input.volume, 0, 2) : 1,
-      muted: Boolean(input.muted)
+      muted: Boolean(input.muted),
+      grade: normalizeGrade(input.grade)
     };
   }
 
@@ -386,6 +398,7 @@
     if (typeof patch.opacity === 'number') clip.opacity = clamp(patch.opacity, 0, 1);
     if (typeof patch.volume === 'number') clip.volume = clamp(patch.volume, 0, 2);
     if (typeof patch.muted === 'boolean') clip.muted = patch.muted;
+    if (patch.grade && typeof patch.grade === 'object') clip.grade = normalizeGrade({ ...clip.grade, ...patch.grade });
     if (patch.start !== undefined || patch.duration !== undefined || patch.in !== undefined) {
       const start = quantize(project, Math.max(0, Number(patch.start ?? clip.start)));
       const duration = quantize(project, Math.max(minDuration(project), Number(patch.duration ?? clip.duration)));

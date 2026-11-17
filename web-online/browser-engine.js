@@ -1,7 +1,7 @@
 /* Browser-only runtime. No connection to the Mac or remote AI is implicit. */
 (function(){
 'use strict';
-const VERSION='0.8.0',enc=new TextEncoder(),dec=new TextDecoder(),nativeFetch=window.StudioDesktop?.fetch?async(url,options={})=>{const r=await window.StudioDesktop.fetch({url,method:options.method,headers:options.headers,body:options.body});if(r.error)throw Error(r.error);return new Response(r.binary?Uint8Array.from(r.data):r.text,{status:r.status,statusText:r.statusText,headers:r.headers})}:window.fetch.bind(window);
+const VERSION='0.9.0',enc=new TextEncoder(),dec=new TextDecoder(),nativeFetch=window.StudioDesktop?.fetch?async(url,options={})=>{const r=await window.StudioDesktop.fetch({url,method:options.method,headers:options.headers,body:options.body});if(r.error)throw Error(r.error);return new Response(r.binary?Uint8Array.from(r.data):r.text,{status:r.status,statusText:r.statusText,headers:r.headers})}:window.fetch.bind(window);
 let key=null,header=null,state=null,session='',expires=0,publicData=null,urls=new Map(),serial=Promise.resolve(),persist=Promise.resolve();
 const id=()=>crypto.randomUUID().replaceAll('-','').slice(0,12),now=()=>new Date().toISOString(),copy=v=>structuredClone(v),hex=bytes=>Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');
 function fail(message,status=422){const e=Error(message);e.status=status;throw e}

@@ -13,10 +13,18 @@
 ### Montage
 
 - Une seule piste vidéo est réellement composée à l'écran ; l'empilement V2/V1 fonctionne, mais il n'y a pas encore de modes de fusion avancés.
-- Pas de transitions glissées sur la timeline, pas de keyframes d'opacité/volume, pas d'effets par clip.
+- Pas de transitions glissées sur la timeline, pas de keyframes d'opacité/volume, pas d'effets par clip au-delà de l'étalonnage.
+- L'étalonnage est un filtre canvas global par clip (exposition, contraste, saturation, température) ; pas encore de courbes, LUT, scope ou masque couleur.
 - Pas de waveform audio dessinée dans les clips.
 - Pas de sous-titres ni de chapitres exportés.
 - Les images acceptent une durée longue ; les vidéos sont limitées à leur durée source.
+
+### Photo
+
+- L'atelier photo est raster : pas de calques vectoriels, de masques de fusion, de groupes, ni de formats PSD.
+- Le texte est saisi via une invite du navigateur, pas encore édité directement sur le canvas.
+- L'historique est limité aux 10 dernières commandes.
+- La composition est locale au navigateur ; elle n'est pas incluse dans l'export `.json` du montage.
 
 ### Persistance
 
@@ -27,9 +35,11 @@
 
 ### Fournisseurs IA
 
-- FreeLLMAPI nécessite une **passerelle fournie par l'utilisateur**. Aucune URL officielle n'a été inventée.
+- **Audit du 2026-11-17** : seules les clés **Tripo** et **Kling** sont présentes dans le profil réel. Tripo répond avec **0 crédit** ; Kling confirme l'accès. Aucune génération cloud payante n'a été lancée. Détail : [08_IA_ET_COMPTES.md](08_IA_ET_COMPTES.md).
+- **Ollama** est le moteur réellement actif : 2 modèles, test de génération réussi en 4,89 s. Il est disponible sur Mac/Electron/serveur Python, pas depuis la PWA publiée.
+- FreeLLMAPI nécessite une **passerelle fournie par l'utilisateur**. Le connecteur est câblé et testé, mais aucune URL ni clé n'est configurée dans ce profil.
 - En PWA, la passerelle doit autoriser CORS. En Electron, le proxy principal évite cette contrainte.
-- Les adaptateurs payants (Anthropic, Gemini, Veo, Kling, Luma, Tripo, ElevenLabs, etc.) n'ont pas été testés avec de vrais comptes pendant cette session. Leur état reste « configuré » tant qu'une génération réelle n'a pas réussi.
+- Les autres adaptateurs payants (Anthropic, Gemini, Veo, Luma, ElevenLabs, etc.) n'ont pas de clé dans ce profil. Leur état reste « clé requise ».
 - Les quotas, droits et conditions de chaque service restent ceux du compte utilisateur.
 
 ### Distribution
@@ -49,27 +59,32 @@
 
 ## 3. Ce qui est réellement vivant aujourd'hui
 
+- Coquille studio professionnelle : menus, onglets, palette `⌘K`, raccourcis `Alt+1…8`, barre d'état.
 - Création/déverrouillage du coffre, import de médias, persistance après rechargement.
 - Timeline multipiste, trim, split, suppression ripple, undo/redo, zoom, aimantation.
+- Étalonnage par clip visible au moniteur et à l'export, avec préréglages et undo/redo.
+- Atelier photo à calques : pinceau, gomme, formes, texte, remplissage, pipette, opacité, fusion, calques, undo/redo, persistance, export PNG.
 - Lecture temps réel avec audio et rendu canvas.
 - Export MP4/WebM téléchargé et relu.
 - Export/import de projet JSON.
 - 20 pages du studio rendues sans erreur.
-- Configuration FreeLLMAPI et test de génération réels.
+- Console IA réelle : Ollama local opérationnel, états Tripo/Kling vérifiés en lecture, FreeLLMAPI configurable.
 - Application Electron, serveur local, proxy IPC et paquets `.dmg`/`.zip` macOS.
 
 ## 4. Prochaines étapes recommandées
 
 1. **Rendu hors ligne** via FFmpeg (ou pipeline Python) pour des exports rapides, alpha et codecs maîtrisés.
 2. **Transitions et composition** : fondus, incrustation, modes de fusion, keyframes.
-3. **Audio** : formes d'onde, vu-mètres, normalisation, fondus.
-4. **Sous-titres** : import/export SRT, édition sur timeline.
-5. **Récupération** : sauvegarde automatique du projet, reprise après fermeture brutale.
-6. **Tests E2E automatisés** dans la CI (Playwright ou Electron + CDP) pour rejouer les scénarios de ce dossier.
-7. **Windows** : construire et tester sur un runner Windows ; vérifier NSIS et portable.
-8. **Signature Apple** : Developer ID + notarisation pour supprimer l'avertissement Gatekeeper.
-9. **FreeLLMAPI** : documenter une passerelle de référence et un exemple CORS, sans intégrer de clé.
-10. **Accessibilité** : navigation clavier complète de la timeline, libellés ARIA, contrastes.
+3. **Étalonnage avancé** : courbes, LUT, scopes, masques couleur.
+4. **Photo** : édition de texte sur canvas, masques, groupes, import/export PSD.
+5. **Audio** : formes d'onde, vu-mètres, normalisation, fondus.
+6. **Sous-titres** : import/export SRT, édition sur timeline.
+7. **Récupération** : sauvegarde automatique du projet, reprise après fermeture brutale.
+8. **Tests E2E automatisés** dans la CI (Playwright ou Electron + CDP) pour rejouer les scénarios de ce dossier.
+9. **Windows** : construire et tester sur un runner Windows ; vérifier NSIS et portable.
+10. **Signature Apple** : Developer ID + notarisation pour supprimer l'avertissement Gatekeeper.
+11. **IA** : recharger le compte Tripo (0 crédit), lancer une génération Kling contrôlée, puis configurer FreeLLMAPI ou une autre clé si l'utilisateur le souhaite.
+12. **Accessibilité** : navigation clavier complète de la timeline, libellés ARIA, contrastes.
 
 ## 5. Règle pour la suite
 

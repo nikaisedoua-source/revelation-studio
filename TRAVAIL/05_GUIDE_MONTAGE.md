@@ -99,3 +99,55 @@ Le test envoie réellement une requête `POST …/v1/chat/completions` avec `Aut
 - Vérifier l'état de sauvegarde avant de fermer l'onglet.
 - Ne jamais partager le mot de passe du coffre dans un projet ou un écran.
 - Pour une diffusion professionnelle, prévoir un rendu hors ligne (montage final) avec un encodeur dédié ; l'export navigateur est un aperçu/master léger, pas un substitut à un pipeline de diffusion.
+
+## 10. Habillage studio et navigation
+
+La barre supérieure contient les menus **Fichier / Édition / Affichage / Outils / Aide**, le nom du projet et l'état IA. Les onglets d'espaces de travail ouvrent directement :
+
+| Onglet | Raccourci | Usage |
+| --- | --- | --- |
+| Média | `Alt+1` | production et bibliothèque |
+| Montage | `Alt+2` | timeline multipiste |
+| Photo | `Alt+3` | atelier à calques |
+| Étalonnage | `Alt+4` | outils couleur |
+| VFX | `Alt+5` | effets et compositing |
+| Audio | `Alt+6` | son |
+| IA Média | `Alt+7` | images et clips IA |
+| Livraison | `Alt+8` | contrôle et export |
+
+`⌘K` (ou `Ctrl+K`) ouvre la **palette de commandes** : taper `photo`, `montage`, `export`, `annuler`, etc. filtre les actions et permet de les exécuter au clavier. `Échap` ferme la palette ou un menu.
+
+Les menus appellent les mêmes fonctions que les boutons de l'éditeur : **Nouveau montage** (`⌘N`), **Ouvrir un projet** (`⌘O`), **Enregistrer** (`⌘S`), **Exporter la vidéo** (`⌘E`), **Actualiser** (`⌘R`). Aucun élément de menu n'est décoratif.
+
+## 11. Étalonnage par clip
+
+1. Sélectionner un clip sur la timeline.
+2. Dans l'inspecteur, section **Étalonnage**, régler **Exposition**, **Contraste**, **Saturation** et **Température**.
+3. Le moniteur se met à jour en direct ; l'export utilise le même rendu.
+4. Les boutons **Neutre / Ambre / Acier / Contraste** appliquent des préréglages complets.
+5. `⌘Z` annule le dernier réglage (une entrée d'historique par relâchement de curseur), `⌘⇧Z` le rétablit.
+
+Valeurs positives : exposition et contraste éclaircissent/renforcent, saturation intensifie les couleurs, température réchauffe (sépia). Valeurs négatives : assombrissent, adoucissent, désaturent, refroidissent (rotation de teinte).
+
+## 12. Atelier photo à calques
+
+1. Ouvrir l'onglet **Photo**. Une composition de bienvenue 1920 × 1080 est fournie.
+2. Choisir un outil dans le rail : déplacement (`V`), pinceau (`B`), gomme (`E`), rectangle, ellipse, texte, remplissage, pipette.
+3. Régler taille, opacité et couleur dans la barre d'options.
+4. Dessiner directement sur le canvas ; les formes se contraignent avec `Maj`.
+5. Gérer les calques à droite : visibilité, vignette, renommage (double-clic), opacité, mode de fusion, ordre, duplication, suppression.
+6. **Annuler / Rétablir** restaure chaque geste, ajout ou propriété.
+7. La composition est sauvegardée automatiquement dans le navigateur ; **Enregistrer** force la sauvegarde, **Ouvrir** recharge la dernière composition.
+8. **Exporter PNG** télécharge le rendu composé réel (tous les calques visibles, opacité et fusion comprises).
+
+Les calques texte sont créés par un clic dans l'image ; le texte est saisi dans l'invite du navigateur. **Importer image** ajoute un fichier comme nouveau calque.
+
+## 13. Comprendre l'état IA
+
+Le bandeau et la page **IA & quotas** affichent l'état réel, pas un décor :
+
+- **Ollama** : modèles locaux détectés, test de génération court sans clé ni coût.
+- **Services cloud configurés** : clés présentes dans le profil.
+- **Générations vérifiées** : au moins un test réel réussi.
+
+Dans le profil audité le 2026-11-17, seules les clés **Tripo** et **Kling** sont présentes. Tripo confirme l'accès mais affiche **0 crédit** ; Kling confirme l'accès. Les autres fournisseurs, dont **FreeLLMAPI**, restent configurables mais ne sont pas connectés. Le détail est dans [08_IA_ET_COMPTES.md](08_IA_ET_COMPTES.md).

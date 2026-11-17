@@ -379,7 +379,7 @@ def execute(j):
 @app.get('/api/bootstrap')
 def bootstrap(request:Request):
  rec=_auth_record();auth=_authorized(request)
- return {'token':TOKEN if auth else None,'version':'0.8.0','name':'Révélation AI Studio','output_root':str(config.production_root()),'charter':cinema.CHARTER,'sources':cinema.SOURCES,'auth':{'configured':bool(rec),'authenticated':auth,'requires_setup':not bool(rec),'profile':({'identity':rec.get('identity','')} if rec and auth else None),'google_configured':all(google_oauth.client()),'google_linked':bool(rec and rec.get('google_sub'))},'catalog_date':catalog.CATALOG_DATE,'catalog_version':catalog.CATALOG_VERSION}
+ return {'token':TOKEN if auth else None,'version':'0.9.0','name':'Révélation AI Studio','output_root':str(config.production_root()),'charter':cinema.CHARTER,'sources':cinema.SOURCES,'auth':{'configured':bool(rec),'authenticated':auth,'requires_setup':not bool(rec),'profile':({'identity':rec.get('identity','')} if rec and auth else None),'google_configured':all(google_oauth.client()),'google_linked':bool(rec and rec.get('google_sub'))},'catalog_date':catalog.CATALOG_DATE,'catalog_version':catalog.CATALOG_VERSION}
 
 @app.get('/api/status')
 def status():
@@ -448,6 +448,39 @@ def capture_photoshop_text():
 @app.get('/api/providers/catalog')
 def provider_catalog():
     return catalog.catalog()
+
+def _ollama_models():
+    payload=registry.request_json('http://127.0.0.1:11434/api/tags',timeout=2)
+    return [item for item in payload.get('models',[]) if isinstance(item,dict) and isinstance(item.get('name'),str)]
+
+@app.get('/api/local/ollama')
+def local_ollama_status():
+    try:
+        models=_ollama_models()
+        return {'connected':True,'models':[{'name':item['name'],'size':item.get('size',0)} for item in models]}
+    except Exception:
+        return {'connected':False,'models':[]}
+
+class OllamaTest(BaseModel):
+    model:str=Field(min_length=1,max_length=160)
+
+@app.post('/api/local/ollama/test')
+def local_ollama_test(s:OllamaTest):
+    try:
+        names={item['name'] for item in _ollama_models()}
+    except Exception:
+        raise HTTPException(503,'Ollama local ne répond pas sur 127.0.0.1:11434. Lancez ollama serve.')
+    if s.model not in names:raise HTTPException(422,'Modèle Ollama non installé sur ce Mac.')
+    try:
+        started=time.monotonic()
+        result=registry.request_json('http://127.0.0.1:11434/api/generate',{'model':s.model,'prompt':'Réponds uniquement par le mot OK.','stream':False,'options':{'num_predict':8}},timeout=90)
+        answer=str(result.get('response','')).strip()
+        if not answer:raise RuntimeError('Réponse vide du modèle.')
+        return {'ok':True,'model':s.model,'answer':answer[:200],'seconds':round(time.monotonic()-started,2)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(502,'Test Ollama échoué : '+str(e)[:160])
 
 class ProviderSettings(BaseModel):
     settings:dict[str,str]=Field(default_factory=dict,max_length=15)

@@ -165,3 +165,80 @@ npm run dist:mac
 ```
 
 Pour le test FreeLLMAPI, toute passerelle OpenAI-compatible avec CORS convient. Une clé de test locale suffit ; ne jamais versionner une vraie clé.
+
+## 6. Passe 0.9.0 — vérifications réelles
+
+Toutes les preuves ci-dessous ont été observées dans un navigateur réel, sur un serveur local isolé (`127.0.0.1:8871`, profil de test).
+
+### 6.1 Suites automatisées
+
+```sh
+node --check web/shell.js
+node --check web/photo-editor.js
+node --check web/editor.js
+node --check web/integrations.js
+npm test
+.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+npm run web:build
+```
+
+Résultats :
+
+| Commande | Résultat |
+| --- | --- |
+| `node --check` (éditeur, coquille, photo, intégrations) | aucun message |
+| `npm test` | **32 tests, 32 succès, 0 échec** |
+| Tests Python | **29 tests, OK** |
+| `npm run web:build` | **24 fichiers, 438 641 octets** |
+
+### 6.2 Atelier photo
+
+Scénario exécuté par événements pointeur et clics réels :
+
+1. trait de pinceau sur le calque actif : pixel passé de `[0,0,0,0]` à `[226,192,122,255]` ;
+2. **Annuler** : pixel revenu exactement à `[0,0,0,0]` ;
+3. **Rétablir** : pixel de nouveau `[226,192,122,255]` ;
+4. **Nouveau calque** : 3 → 4 calques ; annuler → 3 ; rétablir → 4 ;
+5. opacité réglée à **0,5**, fusion **multiply** ;
+6. **Exporter PNG** : téléchargement réel `Revelation-Photo-20261117-2236.png`, **85 Ko**, 1920 × 1080 ;
+7. rechargement complet de la page puis reconnexion : composition restaurée avec **4 calques**, opacité **0,5**, fusion **multiply**, `dirty: false`.
+
+### 6.3 Étalonnage dans le montage
+
+1. import d'un PNG de test 320 × 180 ;
+2. ajout au playhead, clip présent sur V1 ;
+3. exposition réglée à **+70** : le pixel du moniteur passe de `[240,224,176,255]` à `[255,255,255,255]` ;
+4. modèle mis à jour : `{ exposure: 70, contrast: 0, saturation: 0, temperature: 0 }` ;
+5. libellé de l'inspecteur : `+70` ;
+6. **correctif undo** : exposition −50 → −40, `Annuler` restaure −50, `Rétablir` remet −40.
+
+### 6.4 Export vidéo
+
+- `Montage-sans-titre.mp4` téléchargé par un vrai clic de lien ;
+- overlay d'export refermé ;
+- `exporting: false`, `playing: false` après la fin ;
+- durée d'enregistrement observée : environ 5 s pour un clip image de 5 s.
+
+### 6.5 Coquille studio
+
+- menus **Fichier** ouverts avec 10 entrées réelles, fermeture par `Échap` ;
+- palette `⌘K` ouverte, filtre `photo` → résultats « Aller à Atelier photo », « Nouvelle composition photo », etc., fermeture par `Échap` ;
+- onglets d'espaces présents : Média, Montage, Photo, Étalonnage, VFX, Audio, IA Média, Livraison.
+
+### 6.6 Console IA
+
+Diagnostic **Tester les moteurs actifs** observé :
+
+```text
+tripo : accès confirmé · solde 0 crédits
+kling : accès confirmé
+Ollama qwen2.5-coder:1.5b : OK (4.89 s)
+```
+
+Cartes affichées : **2 modèles Ollama**, **2 services cloud** (`kling`, `tripo`), **0 génération vérifiée**. Détail et limites dans [08_IA_ET_COMPTES.md](08_IA_ET_COMPTES.md).
+
+### 6.7 Réseau et secrets
+
+- Aucune clé affichée dans les preuves ; les états viennent de `providers.status()`.
+- Les profils de test et leurs données ont été isolés de `data/`.
+- Le serveur de test est resté sur `127.0.0.1`. Les captures ne contiennent aucun secret.

@@ -36,8 +36,12 @@
 | Chemin | Rôle |
 | --- | --- |
 | `web/` | source de l'interface et de l'éditeur timeline |
-| `web/editor-model.js` | modèle pur UMD : pistes, clips, trim, split, ripple, undo, quantification par frame |
-| `web/editor.js` | interface DOM de l'éditeur, lecture, coffre, export |
+| `web/editor-model.js` | modèle pur UMD : pistes, clips, trim, split, ripple, undo, quantification par frame, étalonnage normalisé |
+| `web/editor.js` | interface DOM de l'éditeur, lecture, coffre, export, inspecteur d'étalonnage |
+| `web/shell.js` | coquille studio : menus, onglets d'espaces, palette `⌘K`, raccourcis, barre d'état, état IA |
+| `web/studio-pro.css` | habillage dense du studio professionnel (menubar, rail, onglets, statusbar, console IA) |
+| `web/photo-editor.js` | atelier photo à calques : outils, composition, historique, IndexedDB, export PNG |
+| `web/photo.css` | habillage de l'atelier photo |
 | `web/studio.js` | navigation et pages du studio (20 pages) |
 | `web-online/browser-engine.js` | moteur local navigateur : coffre, projets, médias, routes `/api/*` simulées |
 | `web-online/cloud-runtime.js` | adaptateurs fournisseurs côté navigateur |
@@ -55,27 +59,29 @@
 
 - Projet : `fps`, `width`, `height`, `tracks[]`, `clips[]`.
 - Pistes par défaut : **V2, V1, A1, A2** (vidéo en haut, audio en bas).
-- Un clip porte : `mediaId`, `trackId`, `start`, `duration`, `in`, `volume`, `opacity`, `kind`.
+- Un clip porte : `mediaId`, `trackId`, `start`, `duration`, `in`, `volume`, `opacity`, `kind`, `grade`.
 - Toute position est quantifiée à la frame (`1 / fps`) par le modèle.
+- `grade` normalise `exposure`, `contrast`, `saturation`, `temperature` dans `[-100, 100]`.
 - Opérations : déplacement, trim gauche/droite, split au playhead, suppression simple ou ripple, duplication, aimantation, zoom.
 - L'historique conserve des instantanés complets ; `Ctrl/⌘+Z` et `Ctrl/⌘+Shift+Z` restaurent l'état.
 
 ## 4. Persistance
 
-Deux bases IndexedDB distinctes :
+Trois bases IndexedDB distinctes :
 
 | Base | Contenu |
 | --- | --- |
 | `revelation-studio-web-v1` | coffre du studio : projets métier, médias, historique, clés fournisseurs, sauvegardes |
 | `revelation-editor-v1` | projets de montage, médias importés, métadonnées de l'éditeur |
+| `revelation-photo-v1` | composition photo à calques (bitmaps PNG, ordre, opacité, fusion, nom) |
 
 Le coffre est chiffré par AES-GCM. La clé est dérivée du mot de passe par PBKDF2-SHA256, 310 000 itérations. Les gros médias sont découpés en blocs chiffrés. Le schéma 2 emballe la clé maître avec le mot de passe, ce qui permet le changement de mot de passe et la clé de secours sans réécrire tous les médias.
 
-L'éditeur sauvegarde le projet à chaque modification (debounce), et l'indicateur de la barre supérieure montre l'état réel (`Enregistrement…`, `Enregistré à …`).
+L'éditeur sauvegarde le projet à chaque modification (debounce), et l'indicateur de la barre supérieure montre l'état réel (`Enregistrement…`, `Enregistré à …`). L'atelier photo déclenche une sauvegarde 2,5 s après la dernière modification.
 
 ## 5. Lecture et export
 
-**Lecture** : pour chaque clip vidéo/audio actif, un élément `<video>`/`<audio>` caché est synchronisé sur l'horloge `requestAnimationFrame`. Le rendu vidéo est dessiné dans un canvas ; le son passe par un gain WebAudio maître et un `MediaStreamDestination`.
+**Lecture** : pour chaque clip vidéo/audio actif, un élément `<video>`/`<audio>` caché est synchronisé sur l'horloge `requestAnimationFrame`. Le rendu vidéo est dessiné dans un canvas ; le son passe par un gain WebAudio maître et un `MediaStreamDestination`. L'étalonnage est appliqué au moment du dessin avec `ctx.filter` (luminosité, contraste, saturation, sépia/rotation de teinte), donc le moniteur et l'enregistrement utilisent exactement le même rendu.
 
 **Export** :
 1. le canvas est capturé via `canvas.captureStream(fps)` ;
@@ -103,6 +109,15 @@ FreeLLMAPI est traité comme une **passerelle OpenAI-compatible configurable** :
 - l'URL est normalisée vers `…/v1/chat/completions`, sans interpolation de paramètres non validés.
 
 Aucune adresse d'API n'est devinée : si le service change d'URL, l'utilisateur la fournit.
+
+**Ollama local** : le serveur Python expose une lecture réelle des modèles installés et un test de génération :
+
+| Route | Effet |
+| --- | --- |
+| `GET /api/local/ollama` | lit `http://127.0.0.1:11434/api/tags` et renvoie les noms de modèles |
+| `POST /api/local/ollama/test` | envoie un court prompt à `/api/generate` (`num_predict: 8`) et renvoie la réponse et la durée |
+
+La console **IA & quotas** affiche trois compteurs (modèles Ollama, services cloud configurés, générations vérifiées) et un bouton **Tester les moteurs actifs**. Le test Tripo/Kling est une **lecture de compte**, jamais une génération payante.
 
 ## 7. Sécurité
 

@@ -223,6 +223,23 @@
     S.project = M.normalizeProject(parsed.project ? parsed.project : parsed);
   }
 
+  async function newProject() {
+    if (!S.project) return;
+    if (S.project.clips.length && !window.confirm('Créer un nouveau montage ? Le montage actuel reste enregistré dans le stockage local.')) return;
+    try {
+      await saveProject(false);
+      S.project = M.createProject({ name: 'Montage sans titre' });
+      S.selectedClipId = null;
+      S.playhead = 0;
+      S.history.reset();
+      await saveProject(false);
+      renderAll();
+      toast('Nouveau montage créé. Le précédent reste récupérable dans le stockage local.');
+    } catch (error) {
+      toast(`Nouveau montage impossible : ${error.message}`);
+    }
+  }
+
   /* ------------------------------------------------------------------ media */
 
   function mediaKind(file) {
@@ -724,6 +741,9 @@
       .join('');
     const mediaEntry = S.media.get(clip.mediaId);
     const missing = !mediaEntry;
+    const grade = clip.grade || { exposure: 0, contrast: 0, saturation: 0, temperature: 0 };
+    const gv = (name) => Math.round(Number(grade[name]) || 0);
+    const gradeSlider = (name, label) => `<div class="ed-grade-row"><label for="ed-grade-${name}">${label}<span id="ed-grade-${name}-value">${gv(name) > 0 ? '+' : ''}${gv(name)}</span></label><input id="ed-grade-${name}" data-grade="${name}" type="range" min="-100" max="100" step="1" value="${gv(name)}"></div>`;
     panel.innerHTML = `<div class="ed-panel-head"><h3>Clip</h3><button class="ed-mini" id="ed-insp-close" title="Désélectionner">×</button></div>
       <div class="ed-field"><label>Nom du clip</label><input id="ed-clip-name" maxlength="120" value="${esc(clip.name)}"></div>
       <div class="ed-field"><label>Média</label><input value="${esc(clip.mediaName || '—')}" disabled></div>
@@ -740,6 +760,19 @@
       ${clip.kind === 'audio' ? '' : `<div class="ed-field"><label>Opacité <span id="ed-opacity-value">${Math.round(clip.opacity * 100)} %</span></label><input id="ed-clip-opacity" type="range" min="0" max="1" step="0.01" value="${clip.opacity}"></div>`}
       <div class="ed-field"><label>Volume <span id="ed-volume-value">${Math.round(clip.volume * 100)} %</span></label><input id="ed-clip-volume" type="range" min="0" max="2" step="0.01" value="${clip.volume}"></div>
       <label class="ed-check"><input type="checkbox" id="ed-clip-muted" ${clip.muted ? 'checked' : ''}> Couper le son du clip</label>
+      ${clip.kind === 'audio' ? '' : `<div class="ed-grade">
+        <div class="ed-grade-head"><h4>Étalonnage</h4><span>Canvas + export</span></div>
+        ${gradeSlider('exposure', 'Exposition')}
+        ${gradeSlider('contrast', 'Contraste')}
+        ${gradeSlider('saturation', 'Saturation')}
+        ${gradeSlider('temperature', 'Température')}
+        <div class="ed-grade-presets">
+          <button type="button" class="ed-btn" data-grade-preset="neutre">Neutre</button>
+          <button type="button" class="ed-btn" data-grade-preset="ambre">Ambre</button>
+          <button type="button" class="ed-btn" data-grade-preset="acier">Acier</button>
+          <button type="button" class="ed-btn" data-grade-preset="contraste">Contraste</button>
+        </div>
+      </div>`}
       <div class="ed-actions">
         <button class="ed-btn" id="ed-clip-split">Couper au playhead</button>
         <button class="ed-btn" id="ed-clip-duplicate">Dupliquer</button>
@@ -878,6 +911,21 @@
     }
   }
 
+  function gradeFilter(clip) {
+    const grade = clip.grade || {};
+    const exposure = Number(grade.exposure) || 0;
+    const contrast = Number(grade.contrast) || 0;
+    const saturation = Number(grade.saturation) || 0;
+    const temperature = Number(grade.temperature) || 0;
+    const parts = [];
+    if (exposure) parts.push(`brightness(${Math.max(0.05, 1 + exposure / 125)})`);
+    if (contrast) parts.push(`contrast(${Math.max(0.1, 1 + contrast / 125)})`);
+    if (saturation) parts.push(`saturate(${Math.max(0, 1 + saturation / 100)})`);
+    if (temperature > 0) parts.push(`sepia(${(temperature * 0.32).toFixed(1)}%)`);
+    else if (temperature < 0) parts.push(`hue-rotate(${(temperature * 0.12).toFixed(1)}deg)`);
+    return parts.length ? parts.join(' ') : 'none';
+  }
+
   function drawFrame(time) {
     const canvas = $('#ed-canvas');
     if (!canvas || !S.project) return;
@@ -886,6 +934,7 @@
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.globalAlpha = 1;
+    ctx.filter = 'none';
     ctx.fillStyle = '#07080c';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const active = M.activeClips(S.project, time).filter((item) => item.clip.kind !== 'audio');
@@ -897,6 +946,7 @@
         if (entry && entry.image && entry.image.complete) {
           ctx.save();
           ctx.globalAlpha = clip.opacity;
+          ctx.filter = gradeFilter(clip);
           containDraw(ctx, entry.image, entry.image.naturalWidth, entry.image.naturalHeight, canvas.width, canvas.height);
           ctx.restore();
           painted = true;
@@ -909,11 +959,13 @@
       if (node && node.el.readyState >= 2 && node.el.videoWidth) {
         ctx.save();
         ctx.globalAlpha = clip.opacity;
+        ctx.filter = gradeFilter(clip);
         containDraw(ctx, node.el, node.el.videoWidth, node.el.videoHeight, canvas.width, canvas.height);
         ctx.restore();
         painted = true;
       }
     }
+    ctx.filter = 'none';
     const empty = $('#ed-canvas-empty');
     if (empty) empty.hidden = painted || active.length > 0;
   }
@@ -1656,10 +1708,56 @@
     if (volume) volume.onchange = (event) => updateSelected({ volume: Number(event.target.value) });
     const muted = $('#ed-clip-muted');
     if (muted) muted.onchange = (event) => updateSelected({ muted: event.target.checked });
+    bindGrade(clip);
     $('#ed-clip-split').onclick = splitAtPlayhead;
     $('#ed-clip-duplicate').onclick = duplicateSelected;
     $('#ed-clip-delete').onclick = () => deleteSelected(false);
     $('#ed-clip-ripple').onclick = () => deleteSelected(true);
+  }
+
+  function bindGrade(clip) {
+    const sliders = $$('#ed-props [data-grade]');
+    if (!sliders.length) return;
+    let pending = null;
+    const read = () => Object.fromEntries(sliders.map((slider) => [slider.dataset.grade, Number(slider.value)]));
+    const paint = () => {
+      for (const slider of sliders) {
+        const label = $(`#ed-grade-${slider.dataset.grade}-value`);
+        if (label) label.textContent = `${Number(slider.value) > 0 ? '+' : ''}${slider.value}`;
+      }
+      drawFrame(S.playhead);
+    };
+    for (const slider of sliders) {
+      slider.oninput = () => {
+        if (!pending) pending = M.clone(clip.grade || {});
+        clip.grade = read();
+        paint();
+      };
+      slider.onchange = () => {
+        const final = read();
+        const before = pending || M.clone(clip.grade || {});
+        pending = null;
+        const live = M.getClip(S.project, clip.id);
+        if (live) live.grade = M.clone(before);
+        const ok = commit(() => M.updateClip(S.project, clip.id, { grade: final }));
+        if (ok) refreshAfterCommit();
+        else paint();
+      };
+    }
+    const presets = {
+      neutre: { exposure: 0, contrast: 0, saturation: 0, temperature: 0 },
+      ambre: { exposure: 4, contrast: 8, saturation: 6, temperature: 32 },
+      acier: { exposure: 2, contrast: 10, saturation: -8, temperature: -30 },
+      contraste: { exposure: 2, contrast: 30, saturation: 4, temperature: 0 }
+    };
+    $$('#ed-props [data-grade-preset]').forEach((button) => {
+      button.onclick = () => {
+        const preset = presets[button.dataset.gradePreset];
+        if (!preset) return;
+        const ok = commit(() => M.updateClip(S.project, clip.id, { grade: preset }));
+        if (ok) refreshAfterCommit();
+      };
+    });
   }
 
   function bindTopbar() {
@@ -1846,6 +1944,18 @@
     mount,
     unmount,
     isMounted: () => S.mounted,
+    newProject,
+    commands: {
+      undo,
+      redo,
+      splitAtPlayhead,
+      duplicateSelected,
+      deleteSelected,
+      exportVideo,
+      saveProject,
+      openProjectPicker: () => { const input = $('#ed-project-file'); if (input) input.click(); },
+      exportProjectJSON
+    },
     _debug: { state: S, M }
   };
 })();

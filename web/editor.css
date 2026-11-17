@@ -149,3 +149,14 @@
   .ed-topbar{gap:8px}
   .ed-top-actions{width:100%}
 }
+
+.ed-grade{margin:10px 0 2px;border:1px solid #2c3039;background:#11141a;border-radius:5px;padding:8px}
+.ed-grade-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+.ed-grade-head h4{font-size:9px;letter-spacing:1.1px;text-transform:uppercase;margin:0;color:#cfc9bc;font-weight:600}
+.ed-grade-head span{font-size:8px;color:#6f7580}
+.ed-grade-row{margin-bottom:5px}
+.ed-grade-row label{display:flex;justify-content:space-between;font-size:8.5px;color:#9ba0ab;margin-bottom:2px}
+.ed-grade-row label span{font:8px ui-monospace,Menlo,monospace;color:var(--gold)}
+.ed-grade-row input[type=range]{height:12px}
+.ed-grade-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:6px}
+.ed-grade-presets .ed-btn{padding:4px 2px;font-size:8px;text-align:center}

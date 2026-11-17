@@ -1,8 +1,12 @@
 # Révélation AI Studio
 
-Version 0.8.0 — scénario, storyboard, motion design et **montage vidéo multipiste**.
+Version 0.9.0 — scénario, storyboard, motion design, **montage vidéo multipiste**, **atelier photo à calques** et **étalonnage réel**.
 
+- **Studio professionnel** : barre de menus, onglets d'espaces (Média, Montage, Photo, Étalonnage, VFX, Audio, IA Média, Livraison), palette `⌘K`, barre d'état et raccourcis `Alt+1…8`.
 - **Éditeur timeline** : médias chiffrés, pistes V2/V1/A1/A2, trim, split, ripple, aimantation, undo/redo, lecture temps réel et export MP4/WebM.
+- **Étalonnage** : exposition, contraste, saturation et température par clip, visibles au moniteur et à l'export, avec préréglages.
+- **Atelier photo** : calques, pinceau, gomme, formes, texte, remplissage, pipette, opacité, modes de fusion, historique, persistance et export PNG.
+- **IA honnête** : Ollama local réellement actif ; Tripo et Kling authentifiés (Tripo à 0 crédit) ; FreeLLMAPI configurable mais sans clé dans le profil audité. Voir [TRAVAIL/08_IA_ET_COMPTES.md](TRAVAIL/08_IA_ET_COMPTES.md).
 - **Édition Mac** : serveur Python local, rendu ProRes alpha, modèles installés et ponts After Effects, Photoshop, Resolve, Premiere et Blender selon leur configuration.
 - **Édition navigateur / PWA** : atelier film, références, historique, exports de projet, aperçu motion vidéo, animatique d’images et sources modifiables. Les projets restent dans un coffre chiffré propre au navigateur.
 - **Applications Electron** : le même socle web est servi localement, avec un proxy réseau dans le processus principal pour joindre les API sans contrainte CORS.
@@ -25,7 +29,9 @@ Ouvrir <http://127.0.0.1:8848>. Les applications sont détectées dans /Applicat
 
 ## Montage vidéo
 
-Ouvrir la page **Montage vidéo** : importer des médias, les glisser sur la timeline (V1 pour la vidéo de base, V2 pour l’image/incrustation, A1/A2 pour le son), rogner par les poignées, couper avec `S`, supprimer avec `Maj+Suppr`, lire avec `Espace`, exporter avec **Exporter la vidéo**. Le projet et les médias restent dans le coffre chiffré ; **Projet .json** permet de transférer la structure.
+Ouvrir l'onglet **Montage** : importer des médias, les glisser sur la timeline (V1 pour la vidéo de base, V2 pour l'image/incrustation, A1/A2 pour le son), rogner par les poignées, couper avec `S`, supprimer avec `Maj+Suppr`, lire avec `Espace`, exporter avec **Exporter la vidéo**. Sélectionner un clip pour régler son **étalonnage** (exposition, contraste, saturation, température) dans l'inspecteur. Le projet et les médias restent dans le coffre chiffré ; **Projet .json** permet de transférer la structure.
+
+L'onglet **Photo** ouvre l'atelier à calques : pinceau, gomme, formes, texte, remplissage, pipette, calques avec opacité et fusion, historique, sauvegarde automatique et export PNG.
 
 L’export navigateur est en temps réel : garder l’onglet actif. Le format est MP4 si le codec est disponible, sinon WebM. Guide détaillé : [TRAVAIL/05_GUIDE_MONTAGE.md](TRAVAIL/05_GUIDE_MONTAGE.md).
 
@@ -75,6 +81,7 @@ Le Studio Mac est individuel et reste sur loopback. L’édition web est un coff
 ## Documentation et contrôles
 
 - [Dossier de travail](TRAVAIL/00_SOMMAIRE.md) — audit, architecture, décisions, journal, guide de montage, preuves, limites
+- [IA et comptes — état réel](TRAVAIL/08_IA_ET_COMPTES.md)
 - [Guide général](LIRE_MOI.md)
 - [Atelier film](docs/ATELIER_FILM.md)
 - [Motion et logiciels](docs/UTILISER_LE_STUDIO.md)
@@ -83,7 +90,7 @@ Le Studio Mac est individuel et reste sur loopback. L’édition web est un coff
 ```sh
 npm test                 # 32 tests Node
 npm run verify           # syntaxe + tests + build
-.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 29 tests Python
 ```
 
 GitHub Actions vérifie la syntaxe de l’éditeur, les tests et la construction web. Aucune mise à jour des logiciels de création n’est lancée par ce projet. Dropbox est exclu de son périmètre de travail.
