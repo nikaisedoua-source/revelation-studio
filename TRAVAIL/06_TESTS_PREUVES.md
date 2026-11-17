@@ -242,3 +242,16 @@ Cartes affichées : **2 modèles Ollama**, **2 services cloud** (`kling`, `tripo
 - Aucune clé affichée dans les preuves ; les états viennent de `providers.status()`.
 - Les profils de test et leurs données ont été isolés de `data/`.
 - Le serveur de test est resté sur `127.0.0.1`. Les captures ne contiennent aucun secret.
+
+### 6.8 Paquet macOS 0.9.0
+
+```sh
+npm run dist:mac
+```
+
+| Fichier | Taille | SHA-256 |
+| --- | --- | --- |
+| `release/Revelation-Studio-0.9.0-arm64.dmg` | 120 813 736 octets | `7d41faba588c6b578f5adf5ea92f1cc9a66b05c44af3d41485f4a42e53cf0170` |
+| `release/Revelation-Studio-0.9.0-arm64.zip` | 117 308 681 octets | `bf74cdb5978c5e710ccdc749012d3a9999099f91e0b41413d3578f2c8d4acd51` |
+
+Le binaire packagé a été lancé directement : le serveur local `127.0.0.1:41888` a répondu **HTTP 200**, puis le processus a été arrêté. Le paquet reste non signé/non notarié (aucune identité Developer ID disponible).
