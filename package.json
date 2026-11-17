@@ -1,6 +1,6 @@
 {
   "name": "revelation-studio",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "description": "Studio de préproduction et montage vidéo local, web, macOS et Windows",
   "main": "desktop/main.cjs",
@@ -16,7 +16,7 @@
     "dist:mac": "npm run web:build && electron-builder --mac",
     "dist:win": "npm run web:build && electron-builder --win",
     "test": "node --test tests/*_test.cjs",
-    "verify": "node --check web/editor-model.js && node --check web/editor.js && node --check web/shell.js && node --check web/photo-editor.js && node --check web/integrations.js && node --check web/studio.js && node --check web-online/cloud-runtime.js && node --check web-online/browser-engine.js && node --check web-online/sw.js && node --test tests/*_test.cjs && npm run web:build"
+    "verify": "node --check web/editor-model.js && node --check web/editor.js && node --check web/shell.js && node --check web/photo-editor.js && node --check web/integrations.js && node --check web/workspaces-pro.js && node --check web/studio.js && node --check web-online/cloud-runtime.js && node --check web-online/browser-engine.js && node --check web-online/sw.js && node --test tests/*_test.cjs && npm run web:build"
   },
   "devDependencies": {
     "electron": "^45.3.4",

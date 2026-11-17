@@ -379,7 +379,7 @@ def execute(j):
 @app.get('/api/bootstrap')
 def bootstrap(request:Request):
  rec=_auth_record();auth=_authorized(request)
- return {'token':TOKEN if auth else None,'version':'0.9.0','name':'Révélation AI Studio','output_root':str(config.production_root()),'charter':cinema.CHARTER,'sources':cinema.SOURCES,'auth':{'configured':bool(rec),'authenticated':auth,'requires_setup':not bool(rec),'profile':({'identity':rec.get('identity','')} if rec and auth else None),'google_configured':all(google_oauth.client()),'google_linked':bool(rec and rec.get('google_sub'))},'catalog_date':catalog.CATALOG_DATE,'catalog_version':catalog.CATALOG_VERSION}
+ return {'token':TOKEN if auth else None,'version':'0.10.0','name':'Révélation AI Studio','output_root':str(config.production_root()),'charter':cinema.CHARTER,'sources':cinema.SOURCES,'auth':{'configured':bool(rec),'authenticated':auth,'requires_setup':not bool(rec),'profile':({'identity':rec.get('identity','')} if rec and auth else None),'google_configured':all(google_oauth.client()),'google_linked':bool(rec and rec.get('google_sub'))},'catalog_date':catalog.CATALOG_DATE,'catalog_version':catalog.CATALOG_VERSION}
 
 @app.get('/api/status')
 def status():
@@ -439,6 +439,19 @@ def open_connected_app(target:str):
  if not path.is_dir():raise HTTPException(409,'Logiciel non détecté. Configurer son emplacement dans le lanceur.')
  subprocess.run(['/usr/bin/open','-a',str(path)],check=True,timeout=10)
  return {'opened':True,'message':'Ouverture demandée. Tester le pont pour confirmer la connexion.'}
+
+@app.post('/api/connections/{target}/folder')
+def open_bridge_folder(target:str):
+ if target not in bridges.APPS:raise HTTPException(404)
+ folder=bridges.BASE/target
+ try:
+  folder.mkdir(parents=True,exist_ok=True)
+  if sys.platform=='darwin':subprocess.run(['/usr/bin/open',str(folder)],check=True,timeout=10)
+  elif os.name=='nt':os.startfile(str(folder))
+  else:subprocess.run(['xdg-open',str(folder)],check=True,timeout=10)
+ except (OSError,subprocess.SubprocessError) as e:
+  raise HTTPException(409,'Dossier du pont inaccessible : '+str(e)) from None
+ return {'opened':True,'folder':str(folder),'message':'Dossier du pont ouvert. Les demandes, heartbeats et confirmations y sont conservés.'}
 
 @app.post('/api/connections/photoshop/capture')
 def capture_photoshop_text():

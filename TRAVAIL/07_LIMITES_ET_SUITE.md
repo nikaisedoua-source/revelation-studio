@@ -26,6 +26,15 @@
 - L'historique est limité aux 10 dernières commandes.
 - La composition est locale au navigateur ; elle n'est pas incluse dans l'export `.json` du montage.
 
+### Ponts logiciels et habillages
+
+- Les habillages par logiciel (Resolve, Fairlight, Photoshop, After Effects, Blender, Premiere) sont **visuels** : ils reprennent accents, fonds et organisation d'espaces, mais ne réimplémentent pas les moteurs de ces applications.
+- Le hub détecte cinq logiciels sur cette machine. Seul le pont **Blender** a été testé de bout en bout dans cette passe (version 5.2.2 LTS).
+- **Resolve, Photoshop, After Effects et Premiere** sont détectés installés mais leurs ponts n'ont pas été lancés : les tests peuvent ouvrir des applications lourdes ou déclencher des demandes d'automatisation macOS. Ils restent affichés « Installé · pont inactif ».
+- La connexion est vérifiée par heartbeat de moins de 25 secondes. Passé ce délai, l'état retombe à « installé » : aucune connexion n'est conservée artificiellement.
+- En mode PWA/navigateur, les ponts natifs ne sont pas joignables ; l'interface affiche explicitement « Compagnon Mac requis » au lieu d'un faux état connecté.
+- L'échange reste **par fichiers** (dossier `ponts/<target>` : demandes, heartbeats, confirmations) et par lancement d'outils ; il n'y a pas encore de synchronisation temps réel de la timeline vers Resolve/Premiere.
+
 ### Persistance
 
 - Le coffre est **local par navigateur**. Aucune synchronisation multi-appareils automatique.
@@ -70,6 +79,8 @@
 - 20 pages du studio rendues sans erreur.
 - Console IA réelle : Ollama local opérationnel, états Tripo/Kling vérifiés en lecture, FreeLLMAPI configurable.
 - Application Electron, serveur local, proxy IPC et paquets `.dmg`/`.zip` macOS.
+- Habillages par logiciel sur 12 espaces et hub de connexions réel avec cinq cartes.
+- Pont Blender réellement testé (5.2.2 LTS), route `/folder` réelle, état honnête par heartbeat.
 
 ## 4. Prochaines étapes recommandées
 
@@ -85,6 +96,8 @@
 10. **Signature Apple** : Developer ID + notarisation pour supprimer l'avertissement Gatekeeper.
 11. **IA** : recharger le compte Tripo (0 crédit), lancer une génération Kling contrôlée, puis configurer FreeLLMAPI ou une autre clé si l'utilisateur le souhaite.
 12. **Accessibilité** : navigation clavier complète de la timeline, libellés ARIA, contrastes.
+13. **Ponts Adobe/Resolve** : tester Resolve, Photoshop, After Effects et Premiere sur une machine dédiée, avec autorisations macOS accordées, puis consigner version et heartbeat réels.
+14. **Synchronisation timeline** : aller au-delà du dossier de pont (export XML/OTIO vers Resolve/Premiere, rendu Resolve API) sans simuler une connexion.
 
 ## 5. Règle pour la suite
 

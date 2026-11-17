@@ -100,7 +100,7 @@
     }
     if (action === 'aiStatus') { showAiStatus(); return; }
     if (action === 'about') {
-      toast('Révélation AI Studio 0.9.0 · montage multipiste, étalonnage canvas, atelier photo à calques, IA locale Ollama et passerelles cloud privées.');
+      toast('Révélation AI Studio 0.10.0 · montage multipiste, étalonnage canvas, atelier photo à calques, habillages Resolve/Photoshop/After Effects/Blender/Fairlight et passerelles vérifiables.');
       return;
     }
     if (action === 'newPhoto') {

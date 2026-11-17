@@ -40,6 +40,8 @@
 | `web/editor.js` | interface DOM de l'éditeur, lecture, coffre, export, inspecteur d'étalonnage |
 | `web/shell.js` | coquille studio : menus, onglets d'espaces, palette `⌘K`, raccourcis, barre d'état, état IA |
 | `web/studio-pro.css` | habillage dense du studio professionnel (menubar, rail, onglets, statusbar, console IA) |
+| `web/workspaces-pro.js` | habillages par logiciel, barre d'identité d'espace, hub de connexions réel, actions de pont |
+| `web/workspaces-pro.css` | variables d'accent par suite (Resolve, Fairlight, Photoshop, After Effects, Blender, Premiere) et styles du hub |
 | `web/photo-editor.js` | atelier photo à calques : outils, composition, historique, IndexedDB, export PNG |
 | `web/photo.css` | habillage de l'atelier photo |
 | `web/studio.js` | navigation et pages du studio (20 pages) |
@@ -119,7 +121,37 @@ Aucune adresse d'API n'est devinée : si le service change d'URL, l'utilisateur 
 
 La console **IA & quotas** affiche trois compteurs (modèles Ollama, services cloud configurés, générations vérifiées) et un bouton **Tester les moteurs actifs**. Le test Tripo/Kling est une **lecture de compte**, jamais une génération payante.
 
-## 7. Sécurité
+## 7. Espaces raccordés et hub de connexions (0.10.0)
+
+`web/workspaces-pro.js` s'exécute après `shell.js` et enveloppe la fonction globale `render`. À chaque rendu, il applique l'identité du logiciel lié à la page :
+
+| Page studio | Suite visuelle | Logiciel cible |
+| --- | --- | --- |
+| `montage`, `color`, `coverage` | Resolve (orange `#f07a45`) | `resolve` |
+| `audio` | Fairlight (cyan `#46c6d8`) | `resolve` |
+| `photo`, `photoshop`, `storyboard` | Photoshop (bleu `#4aa3ff`) | `photoshop` |
+| `motion`, `effects`, `graphics` | After Effects (violet `#a58bff`) | `after_effects` |
+| `three_d` | Blender (ambre `#ea9a4e`) | `blender` |
+| `film` | Premiere Pro (lilas `#c49bff`) | `premiere` |
+
+Mécanique :
+
+1. `syncChrome()` pose `data-suite` sur `<body>` et `#workspace`, règle `--wsp-accent`, puis injecte une **barre d'identité** sticky (logo, nom du logiciel, onglets de pages, état du pont, boutons Tester / Ouvrir / Dossier / Hub).
+2. Un `MutationObserver` sur `#workspace` réinjecte la barre quand une page remplace son contenu (éditeur, photo, film).
+3. `renderHub()` remplace la page Connexions par cinq cartes alimentées par `stats.apps` : état, version, chemin du dossier de pont, dernier test et boutons réels.
+4. `statusInfo(target)` ne prétend jamais qu'un pont est actif : en mode web il affiche « Compagnon Mac requis » ; côté Mac il distingue `connected` (heartbeat < 25 s via `api_status.json` + `heartbeat.json`), `installed`, et `absent`.
+
+Routes serveur ajoutées ou utilisées par le hub :
+
+| Route | Effet |
+| --- | --- |
+| `POST /api/connections/{target}/activate` | lance le test réel du pont (AppleScript Adobe, processus Blender, API Resolve, panneau UXP Premiere) et écrit le heartbeat |
+| `POST /api/connections/{target}/open` | ouvre l'application détectée |
+| `POST /api/connections/{target}/folder` | crée puis ouvre le dossier `ponts/<target>` (demandes, heartbeats, confirmations) |
+
+Les habillages sont **cosmétiques** ; les états et les actions sont **réels**. C'est le compromis explicite : ressembler à Resolve/Photoshop sans inventer de connexion.
+
+## 8. Sécurité
 
 - **Renderer Electron** : `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, navigation et `window.open` restreints à l'origine locale.
 - **Serveur statique** : chemins résolus sous la racine, refus des traversées, liste blanche MIME, GET/HEAD seulement, fichiers cachés refusés, CSP stricte.
@@ -127,8 +159,8 @@ La console **IA & quotas** affiche trois compteurs (modèles Ollama, services cl
 - **Coffre** : secrets classés par nom (`*_KEY`, `*_TOKEN`, `*_SECRET`, `*_PASSWORD`) et jamais renvoyés en clair par les routes de statut.
 - **Build** : `build_web.py` vérifie les marqueurs de secrets et n'inclut pas `data/`, `.env`, clés ou sauvegardes.
 
-## 8. Distribution
+## 9. Distribution
 
-- PWA : `manifest.webmanifest`, icônes 180/192/512, service worker versionné `revelation-web-0.8.0`.
+- PWA : `manifest.webmanifest`, icônes 180/192/512, service worker versionné `revelation-web-0.10.0`.
 - Electron : `electron-builder` produit `.dmg` + `.zip` macOS arm64, et configure NSIS + portable Windows ainsi qu'AppImage Linux.
 - Le nom du bundle macOS est volontairement **ASCII** (`Revelation Studio.app`) ; l'interface et le titre restent « Révélation ». Un bundle accentué provoquait un crash au démarrage sur la machine de test.

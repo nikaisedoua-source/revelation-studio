@@ -1,6 +1,6 @@
 # Révélation Studio — dossier de travail
 
-Version documentée : **0.9.0**
+Version documentée : **0.10.0**
 Date de cette passe : **2026-11-17**
 Dossier de code : `REVELATION_STUDIO/`
 
@@ -22,6 +22,8 @@ Ce dossier explique ce qui a été construit, pourquoi, comment le vérifier et 
 ## Ce que fait l'application
 
 - **Habillage studio professionnel** : barre de menus, onglets d'espaces de travail (Média, Montage, Photo, Étalonnage, VFX, Audio, IA Média, Livraison), palette de commandes `⌘K`, barre d'état et raccourcis `Alt+1…8`, dans l'esprit d'un DaVinci Resolve / Photoshop.
+- **Habillages par logiciel (0.10.0)** : 12 espaces raccordés à leur logiciel — Resolve (montage, couleur, livraison), Fairlight (mixage), Photoshop (photo, texte, storyboard), After Effects (motion, VFX, graphiques), Blender (3D), Premiere Pro (atelier film). Chaque espace porte une barre d'identité avec l'état réel du pont (`Connecté`, `Installé · pont inactif`, `Non détecté`, `Compagnon Mac requis`), la version détectée et les actions Tester / Ouvrir / Dossier / Hub.
+- **Hub de connexions réel** : la page Connexions remplace l'ancien tableau par cinq cartes logicielles alimentées par `stats.apps` ; chaque action appelle une route réelle (`/activate`, `/open`, `/folder`). Aucun pont n'est affiché connecté sans heartbeat récent.
 - **Éditeur timeline réel** : médias importés, pistes V2/V1/A1/A2, déplacement, coupe, découpe, suppression avec ripple, aimantation, zoom, annuler/rétablir, lecture temps réel, export vidéo MP4/WebM.
 - **Étalonnage réel** : exposition, contraste, saturation et température par clip, appliqués au moniteur **et** à l'export, avec préréglages Neutre/Ambre/Acier/Contraste.
 - **Atelier photo à calques** : pinceau, gomme, formes, texte, remplissage, pipette, déplacement, opacité, modes de fusion, visibilité, réordonnancement, duplication, historique, persistance IndexedDB et export PNG réel.

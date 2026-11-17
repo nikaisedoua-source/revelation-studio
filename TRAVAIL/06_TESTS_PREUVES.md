@@ -255,3 +255,79 @@ npm run dist:mac
 | `release/Revelation-Studio-0.9.0-arm64.zip` | 117 308 681 octets | `bf74cdb5978c5e710ccdc749012d3a9999099f91e0b41413d3578f2c8d4acd51` |
 
 Le binaire packagé a été lancé directement : le serveur local `127.0.0.1:41888` a répondu **HTTP 200**, puis le processus a été arrêté. Le paquet reste non signé/non notarié (aucune identité Developer ID disponible).
+
+## 7. Passe 0.10.0 — espaces raccordés et hub réel
+
+Serveur isolé `127.0.0.1:8871`, données de test dans `/tmp/revelation-wsp-test`, profil `Test Workspaces`. Aucune donnée personnelle utilisée, aucun secret affiché.
+
+### 7.1 Suites automatisées
+
+| Commande | Résultat |
+| --- | --- |
+| `npm test` | **32 tests, 32 succès, 0 échec** |
+| `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'` | **29 tests, OK** |
+| `npm run verify` | syntaxe + tests + build OK |
+| `npm run web:build` | **26 fichiers, 469 249 octets** |
+
+### 7.2 Habillages et barres d'identité
+
+Les 12 pages ont été parcourues dans un vrai navigateur et inspectées par script :
+
+| Page | Suite appliquée | Barre d'identité |
+| --- | --- | --- |
+| `montage`, `color`, `coverage` | `resolve` | DaVinci Resolve |
+| `audio` | `fairlight` | Fairlight |
+| `photo`, `photoshop`, `storyboard` | `photoshop` | Adobe Photoshop |
+| `motion`, `effects`, `graphics` | `aftereffects` | Adobe After Effects |
+| `three_d` | `blender` | Blender |
+| `film` | `premiere` | Adobe Premiere Pro |
+
+- `document.body.dataset.suite` et `#workspace[data-suite]` correspondaient à chaque page ;
+- la barre affichait logo, nom, onglets et état ; le bouton « Tester » n'était plus étiré sur toute la largeur ;
+- `connections` n'affiche aucune barre (elle porte le hub) ;
+- aucune erreur console observée pendant la navigation.
+
+### 7.3 Hub de connexions
+
+Avant test :
+
+```text
+5/5 LOGICIELS DÉTECTÉS
+0/5 PONTS ACTIFS
+12 ESPACES RELIÉS
+MAC MODE D’EXÉCUTION
+```
+
+Cinq cartes réelles : DaVinci Resolve, Adobe Photoshop, Adobe After Effects, Blender, Adobe Premiere Pro, avec version détectée, rôle, dossier de pont et boutons.
+
+### 7.4 Test réel du pont Blender
+
+1. clic **Tester** dans la barre 3D ;
+2. réponse serveur : « Moteur Blender testé. Les scènes sont fabriquées dans un processus séparé puis ouvertes en .blend. » ;
+3. barre passée à **Connecté · version 5.2.2 LTS**, classe `wsp-id-state ok`, point vert ;
+4. hub recalculé à **1/5 PONTS ACTIFS**, carte Blender `version 5.2.2 LTS`, `moteur local`, dernier test `17/11/2026 23:00` ;
+5. chemin du pont : `/private/tmp/revelation-wsp-test/ponts/blender`.
+
+### 7.5 Route dossier
+
+- clic **Dossier du pont** sur la carte Blender ;
+- réponse : « Dossier du pont ouvert. Les demandes, heartbeats et confirmations y sont conservés. » ;
+- Finder ouvert sur le dossier réel ;
+- aucune erreur console.
+
+### 7.6 Non testé dans cette passe
+
+Resolve, Photoshop, After Effects et Premiere sont détectés **installés** mais leurs ponts n'ont pas été lancés (ils peuvent ouvrir des applications lourdes ou demander des autorisations macOS). Leur état reste « Installé · pont inactif », jamais « Connecté ».
+
+### 7.7 Paquet macOS 0.10.0
+
+```sh
+npm run dist:mac
+```
+
+| Fichier | Taille | SHA-256 |
+| --- | --- | --- |
+| `release/Revelation-Studio-0.10.0-arm64.dmg` | 120 830 618 octets | `283d9883dedf526bf4dfc89e58b31a93149fe5b9e3d3ae8929ecebf725d2d069` |
+| `release/Revelation-Studio-0.10.0-arm64.zip` | 117 316 854 octets | `2c867bcc538fe3ce4673b134f1e9017eb004c49be6592b65d86bff56f6c1bb13` |
+
+Le binaire packagé a été lancé directement : le serveur local `127.0.0.1:41888` a répondu **HTTP 200**, puis le processus a été arrêté. Le paquet reste non signé/non notarié (aucune identité Developer ID disponible).

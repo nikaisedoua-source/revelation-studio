@@ -1,8 +1,10 @@
 # Révélation AI Studio
 
-Version 0.9.0 — scénario, storyboard, motion design, **montage vidéo multipiste**, **atelier photo à calques** et **étalonnage réel**.
+Version 0.10.0 — scénario, storyboard, motion design, **montage vidéo multipiste**, **atelier photo à calques**, **étalonnage réel** et **espaces raccordés aux logiciels de création**.
 
 - **Studio professionnel** : barre de menus, onglets d'espaces (Média, Montage, Photo, Étalonnage, VFX, Audio, IA Média, Livraison), palette `⌘K`, barre d'état et raccourcis `Alt+1…8`.
+- **Habillages par logiciel** : chaque espace reprend l'identité visuelle du logiciel auquel il est raccordé — Resolve (montage, couleur, livraison), Fairlight (audio), Photoshop (photo, texte, storyboard), After Effects (motion, VFX, graphiques), Blender (3D) et Premiere Pro (atelier film) — avec une barre d'identité réelle (état du pont, version, Tester / Ouvrir / Dossier / Hub).
+- **Hub de connexions réel** : la page Connexions liste les cinq logiciels détectés sur la machine, leur état vérifié par heartbeat, le dossier de pont et les actions réelles `POST /api/connections/{target}/activate|open|folder`. Aucun état « connecté » n'est affiché sans preuve.
 - **Éditeur timeline** : médias chiffrés, pistes V2/V1/A1/A2, trim, split, ripple, aimantation, undo/redo, lecture temps réel et export MP4/WebM.
 - **Étalonnage** : exposition, contraste, saturation et température par clip, visibles au moniteur et à l'export, avec préréglages.
 - **Atelier photo** : calques, pinceau, gomme, formes, texte, remplissage, pipette, opacité, modes de fusion, historique, persistance et export PNG.
@@ -32,6 +34,12 @@ Ouvrir <http://127.0.0.1:8848>. Les applications sont détectées dans /Applicat
 Ouvrir l'onglet **Montage** : importer des médias, les glisser sur la timeline (V1 pour la vidéo de base, V2 pour l'image/incrustation, A1/A2 pour le son), rogner par les poignées, couper avec `S`, supprimer avec `Maj+Suppr`, lire avec `Espace`, exporter avec **Exporter la vidéo**. Sélectionner un clip pour régler son **étalonnage** (exposition, contraste, saturation, température) dans l'inspecteur. Le projet et les médias restent dans le coffre chiffré ; **Projet .json** permet de transférer la structure.
 
 L'onglet **Photo** ouvre l'atelier à calques : pinceau, gomme, formes, texte, remplissage, pipette, calques avec opacité et fusion, historique, sauvegarde automatique et export PNG.
+
+## Logiciels raccordés
+
+La page **Connexions** est un hub réel : cinq cartes (DaVinci Resolve, Adobe Photoshop, Adobe After Effects, Blender, Adobe Premiere Pro) montrent si le logiciel est installé, sa version, son dossier de pont et son dernier test. Les boutons **Tester**, **Ouvrir** et **Dossier du pont** appellent le serveur local (`/api/connections/{target}/…`). Un pont n'est marqué **Connecté** que si un heartbeat de moins de 25 secondes le confirme ; sinon l'état reste « Installé · pont inactif ». Dans la PWA, l'interface indique « Compagnon Mac requis ».
+
+Les espaces reprennent l'identité du logiciel lié : montage/couleur/livraison → Resolve, audio → Fairlight, photo/texte/storyboard → Photoshop, motion/VFX/graphiques → After Effects, 3D → Blender, atelier film → Premiere Pro. L'habillage est visuel ; les outils internes (timeline, étalonnage, photo, IA) restent ceux du Studio.
 
 L’export navigateur est en temps réel : garder l’onglet actif. Le format est MP4 si le codec est disponible, sinon WebM. Guide détaillé : [TRAVAIL/05_GUIDE_MONTAGE.md](TRAVAIL/05_GUIDE_MONTAGE.md).
 
