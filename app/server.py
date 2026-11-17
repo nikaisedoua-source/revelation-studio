@@ -379,7 +379,7 @@ def execute(j):
 @app.get('/api/bootstrap')
 def bootstrap(request:Request):
  rec=_auth_record();auth=_authorized(request)
- return {'token':TOKEN if auth else None,'version':'0.10.0','name':'Révélation AI Studio','output_root':str(config.production_root()),'charter':cinema.CHARTER,'sources':cinema.SOURCES,'auth':{'configured':bool(rec),'authenticated':auth,'requires_setup':not bool(rec),'profile':({'identity':rec.get('identity','')} if rec and auth else None),'google_configured':all(google_oauth.client()),'google_linked':bool(rec and rec.get('google_sub'))},'catalog_date':catalog.CATALOG_DATE,'catalog_version':catalog.CATALOG_VERSION}
+ return {'token':TOKEN if auth else None,'version':'0.11.0','name':'Révélation AI Studio','output_root':str(config.production_root()),'charter':cinema.CHARTER,'sources':cinema.SOURCES,'auth':{'configured':bool(rec),'authenticated':auth,'requires_setup':not bool(rec),'profile':({'identity':rec.get('identity','')} if rec and auth else None),'google_configured':all(google_oauth.client()),'google_linked':bool(rec and rec.get('google_sub'))},'catalog_date':catalog.CATALOG_DATE,'catalog_version':catalog.CATALOG_VERSION}
 
 @app.get('/api/status')
 def status():

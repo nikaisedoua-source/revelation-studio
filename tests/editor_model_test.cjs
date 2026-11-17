@@ -207,3 +207,53 @@ test('adding tracks keeps video on top and audio at the bottom', () => {
   assert.equal(audio.id, 'A3');
   assert.equal(p.tracks[p.tracks.length - 1].id, 'A3');
 });
+
+test('transform and fades normalize, clamp and survive a project round-trip', () => {
+  const p = project();
+  const clip = add(p, {
+    transform: { x: 0.25, y: -0.5, scale: 1.4, rotation: 22 },
+    fadeIn: 1,
+    fadeOut: 0.5
+  });
+  assert.deepEqual(clip.transform, { x: 0.25, y: -0.5, scale: 1.4, rotation: 22 });
+  assert.equal(clip.fadeIn, 1);
+  assert.equal(clip.fadeOut, 0.5);
+
+  M.updateClip(p, clip.id, { transform: { x: 4, scale: 0.001, rotation: -400 } });
+  assert.deepEqual(clip.transform, { x: 1, y: -0.5, scale: 0.05, rotation: -180 });
+
+  M.updateClip(p, clip.id, { fadeIn: 99, fadeOut: -3 });
+  assert.equal(clip.fadeIn, clip.duration);
+  assert.equal(clip.fadeOut, 0);
+
+  const normalized = M.normalizeProject(M.clone(p));
+  assert.deepEqual(normalized.clips[0].transform, clip.transform);
+  assert.equal(normalized.clips[0].fadeIn, clip.fadeIn);
+});
+
+test('fadeFactor ramps opacity at both edges and stays full in the middle', () => {
+  const p = project();
+  const clip = add(p, { start: 2, duration: 4, fadeIn: 1, fadeOut: 2 });
+  assert.equal(M.fadeFactor(clip, 2), 0);
+  assert.equal(M.fadeFactor(clip, 2.5), 0.5);
+  assert.equal(M.fadeFactor(clip, 3), 1);
+  assert.equal(M.fadeFactor(clip, 4), 1);
+  assert.equal(M.fadeFactor(clip, 5), 0.5);
+  assert.equal(M.fadeFactor(clip, 6), 0);
+  assert.equal(M.fadeFactor(clip, 0), 0);
+});
+
+test('split and trim keep fades attached to the correct edges', () => {
+  const p = project();
+  const clip = add(p, { start: 1, duration: 6, fadeIn: 2, fadeOut: 3 });
+  const { left, right } = M.splitClip(p, clip.id, 4);
+  assert.equal(left.fadeIn, 2);
+  assert.equal(left.fadeOut, 0);
+  assert.equal(right.fadeIn, 0);
+  assert.equal(right.fadeOut, 3);
+
+  M.trimClipTo(p, right.id, 'right', 5);
+  assert.equal(right.duration, 1);
+  assert.equal(right.fadeOut, 1, 'fadeOut is clamped to the shortened clip');
+  assert.equal(left.fadeIn, 2);
+});

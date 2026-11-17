@@ -1,6 +1,6 @@
 {
   "name": "revelation-studio",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "description": "Studio de préproduction et montage vidéo local, web, macOS et Windows",
   "main": "desktop/main.cjs",

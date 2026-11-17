@@ -249,6 +249,12 @@
         layer.ctx.clearRect(0, 0, D.width, D.height);
         layer.ctx.drawImage(entry.beforeCanvas, 0, 0);
       }
+    } else if (entry.kind === 'text') {
+      const layer = D.layers.find((item) => item.id === entry.layerId);
+      if (layer) {
+        if (entry.beforeBitmap) restoreBitmap(layer, entry.beforeBitmap);
+        layer.text = entry.before ? { ...entry.before } : null;
+      }
     } else if (entry.kind === 'add') {
       const index = layerIndex(entry.layer.id);
       if (index >= 0) D.layers.splice(index, 1);
@@ -289,6 +295,13 @@
       if (layer) {
         layer.ctx.clearRect(0, 0, D.width, D.height);
         layer.ctx.drawImage(entry.beforeCanvas, entry.dx, entry.dy);
+      }
+    } else if (entry.kind === 'text') {
+      const layer = D.layers.find((item) => item.id === entry.layerId);
+      if (layer) {
+        if (entry.beforeBitmap) restoreBitmap(layer, entry.beforeBitmap);
+        layer.text = { ...entry.after };
+        drawTextContent(layer);
       }
     } else if (entry.kind === 'add') {
       D.layers.splice(Math.min(entry.index, D.layers.length), 0, entry.layer);
@@ -428,18 +441,51 @@
     toast(`Couleur prélevée : ${hex.toUpperCase()}`);
   }
 
+  function textFont(size, family) {
+    return `600 ${Math.max(1, Math.round(Number(size) || 32))}px ${family || 'Georgia'}, sans-serif`;
+  }
+
+  function drawTextContent(layer) {
+    const text = layer.text;
+    if (!text) return;
+    const ctx = layer.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, D.width, D.height);
+    ctx.fillStyle = text.color || '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.font = textFont(text.size, text.family);
+    ctx.fillText(String(text.value || ''), text.x, text.y);
+    ctx.restore();
+  }
+
+  function snapshotText(layer) {
+    return {
+      text: layer.text ? { ...layer.text } : null,
+      bitmap: layer.ctx.getImageData(0, 0, D.width, D.height)
+    };
+  }
+
+  function commitText(layer, before, patches) {
+    const after = { ...layer.text, ...patches };
+    layer.text = before.text ? { ...before.text } : null;
+    restoreBitmap(layer, before.bitmap);
+    layer.text = after;
+    drawTextContent(layer);
+    pushHistory({ kind: 'text', layerId: layer.id, before: before.text, after, beforeBitmap: before.bitmap }, 'Texte');
+    renderLayers();
+    compose();
+  }
+
   function addTextLayer(point) {
     const value = window.prompt('Texte du calque :', 'VOTRE TEXTE');
     if (!value || !value.trim()) return;
     const layer = makeLayer(value.trim().slice(0, 26), {
       text: { value: value.trim(), x: point.x, y: point.y, size: D.fontSize, family: D.fontFamily, color: D.color }
     });
-    layer.ctx.save();
-    layer.ctx.fillStyle = D.color;
-    layer.ctx.textBaseline = 'top';
-    layer.ctx.font = `600 ${D.fontSize}px ${D.fontFamily}, sans-serif`;
-    layer.ctx.fillText(value.trim(), point.x, point.y);
-    layer.ctx.restore();
+    drawTextContent(layer);
     D.layers.push(layer);
     D.activeId = layer.id;
     pushHistory({ kind: 'add', layer, index: D.layers.length - 1 }, 'Calque texte');
@@ -638,6 +684,11 @@
     slot.innerHTML = `<div class="ph-prop-row"><label>Opacité <span id="ph-opacity-value">${Math.round(layer.opacity * 100)} %</span></label><input id="ph-opacity" type="range" min="0" max="1" step="0.01" value="${layer.opacity}"></div>
       <div class="ph-prop-row"><label>Fusion</label><select id="ph-blend">${BLENDS.map((blend) => `<option value="${blend}" ${layer.blend === blend ? 'selected' : ''}>${blend}</option>`).join('')}</select></div>
       <div class="ph-prop-row"><label>Nom</label><input id="ph-layer-title" maxlength="40" value="${esc(layer.name)}"></div>
+      ${layer.text ? `<div class="ph-prop-row"><label>Texte du calque <span>modifiable</span></label><input id="ph-text-value" type="text" maxlength="120" value="${esc(layer.text.value)}"></div>
+      <div class="ph-prop-row"><label>Taille <span id="ph-text-size-value">${Math.round(layer.text.size)} px</span></label><input id="ph-text-size" type="range" min="12" max="420" step="1" value="${layer.text.size}"></div>
+      <div class="ph-prop-row"><label>Police</label><select id="ph-text-font">${FONTS.map((font) => `<option value="${font}" ${layer.text.family === font ? 'selected' : ''}>${font}</option>`).join('')}</select></div>
+      <div class="ph-prop-row"><label>Couleur</label><input id="ph-text-color" type="color" value="${layer.text.color || '#ffffff'}"></div>
+      <p class="ph-hint">Double-clique le texte dans l’image pour le reprendre ici. Chaque modification reste annulable.</p>` : ''}
       <div class="ph-prop-grid">
         <button type="button" class="secondary" id="ph-layer-up">Monter</button>
         <button type="button" class="secondary" id="ph-layer-down">Descendre</button>
@@ -680,6 +731,31 @@
     document.getElementById('ph-layer-down').onclick = () => moveLayer(-1);
     document.getElementById('ph-layer-duplicate').onclick = duplicateLayer;
     document.getElementById('ph-layer-delete').onclick = removeLayer;
+    if (layer.text) {
+      let pending = null;
+      const bindText = (element, read, label) => {
+        if (!element) return;
+        element.oninput = () => {
+          if (!pending) pending = snapshotText(layer);
+          layer.text = { ...layer.text, ...read() };
+          drawTextContent(layer);
+          compose();
+          if (label) label();
+        };
+        element.onchange = () => {
+          const snap = pending || snapshotText(layer);
+          pending = null;
+          commitText(layer, snap, read());
+        };
+      };
+      bindText(document.getElementById('ph-text-value'), () => ({ value: document.getElementById('ph-text-value').value }));
+      bindText(document.getElementById('ph-text-size'), () => ({ size: Number(document.getElementById('ph-text-size').value) }), () => {
+        const label = document.getElementById('ph-text-size-value');
+        if (label) label.textContent = `${Math.round(Number(document.getElementById('ph-text-size').value))} px`;
+      });
+      bindText(document.getElementById('ph-text-font'), () => ({ family: document.getElementById('ph-text-font').value }));
+      bindText(document.getElementById('ph-text-color'), () => ({ color: document.getElementById('ph-text-color').value }));
+    }
   }
 
   function renderOptions() {
@@ -992,6 +1068,12 @@
     canvas.addEventListener('pointercancel', onPointerUp);
     canvas.addEventListener('pointerleave', () => { const cursor = document.getElementById('ph-cursor'); if (cursor) cursor.textContent = ''; });
     canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+    canvas.addEventListener('dblclick', () => {
+      const layer = activeLayer();
+      if (!layer || !layer.text) return;
+      const input = document.getElementById('ph-text-value');
+      if (input) { input.focus(); input.select(); }
+    });
 
     document.querySelectorAll('[data-ph]').forEach((button) => {
       button.onclick = () => {

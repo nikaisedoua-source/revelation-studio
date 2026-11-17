@@ -160,3 +160,34 @@
 .ed-grade-row input[type=range]{height:12px}
 .ed-grade-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:6px}
 .ed-grade-presets .ed-btn{padding:4px 2px;font-size:8px;text-align:center}
+
+/* --- 0.11.0 · recherche, formes d'onde, fondus, transformation, scopes --- */
+.ed-search{width:100%;background:#11141a;border:1px solid #343843;color:var(--text);border-radius:4px;padding:6px 8px;font-size:10px;margin-bottom:8px}
+.ed-search:focus{outline:none;border-color:var(--gold)}
+.ed-search::placeholder{color:#6d727c}
+.ed-wave{position:absolute;inset:0;width:100%;height:100%;opacity:.8;pointer-events:none;z-index:0}
+.ed-clip.audio .ed-clip-body{position:relative;z-index:3;text-shadow:0 1px 3px #000,0 0 6px #000}
+.ed-fade{position:absolute;top:0;bottom:0;left:0;min-width:6px;background:linear-gradient(90deg,rgba(6,8,12,.88),rgba(6,8,12,0));pointer-events:none;z-index:1}
+.ed-fade.right{left:auto;right:0;background:linear-gradient(270deg,rgba(6,8,12,.88),rgba(6,8,12,0))}
+.ed-btn.ed-active{background:#3b3222;border-color:#8a713f;color:var(--gold)}
+.ed-reset{font-size:8px;padding:2px 6px}
+.ed-scopes{display:flex;gap:6px;padding:0 2px;flex:0 0 auto}
+.ed-scope{position:relative;flex:1;min-width:0;background:#05070a;border:1px solid #23262e;border-radius:5px;padding:2px}
+.ed-scope>span{position:absolute;top:2px;left:5px;font:7px ui-monospace,Menlo,monospace;letter-spacing:1px;color:#6f7580;z-index:1}
+.ed-scope canvas{display:block;width:100%;height:76px}
+.ed-scope.compact{flex:0 0 32%}
+.ed-grade .ed-two .ed-field{margin-bottom:0}
+.ed-scopes[hidden]{display:none}
+.ed-scopes{position:absolute;top:8px;right:8px;z-index:8;width:min(380px,58%);padding:0;pointer-events:none}
+.ed-scope{background:rgba(5,7,10,.86);box-shadow:0 3px 12px rgba(0,0,0,.55)}
+.ed-scope canvas{height:68px}
+.ed-scope.compact{flex:0 0 34%}
+@media(max-height:820px){
+  .ed-shell{height:calc(100vh - 140px);min-height:440px}
+  .ed-timeline-panel{height:216px;min-height:180px}
+  .ed-scope canvas{height:56px}
+}
+@media(max-width:620px){
+  .ed-scopes{width:74%}
+  .ed-scope canvas{height:52px}
+}

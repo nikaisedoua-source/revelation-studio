@@ -13,16 +13,20 @@
 ### Montage
 
 - Une seule piste vidéo est réellement composée à l'écran ; l'empilement V2/V1 fonctionne, mais il n'y a pas encore de modes de fusion avancés.
-- Pas de transitions glissées sur la timeline, pas de keyframes d'opacité/volume, pas d'effets par clip au-delà de l'étalonnage.
-- L'étalonnage est un filtre canvas global par clip (exposition, contraste, saturation, température) ; pas encore de courbes, LUT, scope ou masque couleur.
-- Pas de waveform audio dessinée dans les clips.
+- Pas de transitions glissées sur la timeline, pas de keyframes d'opacité/volume/transformation, pas d'effets par clip au-delà de l'étalonnage et de la transformation.
+- La transformation (X/Y, échelle, rotation) et les fondus entrée/sortie sont des valeurs **fixes** sur la durée du clip, sans animation.
+- L'étalonnage est un filtre canvas global par clip (exposition, contraste, saturation, température) ; pas encore de courbes, LUT, qualifier, masque couleur ni power window.
+- Les scopes se limitent à la waveform luma et au vectorscope Cb/Cr ; pas de RGB parade ni d'histogramme.
+- Les formes d'onde audio sont dessinées, mais il n'y a ni vu-mètres, ni EQ, ni compression, ni normalisation.
+- Pas de trim roll/slip/slide, de remappage de vitesse, de multicam ni d'imbrication.
 - Pas de sous-titres ni de chapitres exportés.
 - Les images acceptent une durée longue ; les vidéos sont limitées à leur durée source.
 
 ### Photo
 
-- L'atelier photo est raster : pas de calques vectoriels, de masques de fusion, de groupes, ni de formats PSD.
-- Le texte est saisi via une invite du navigateur, pas encore édité directement sur le canvas.
+- L'atelier photo est raster : pas de calques vectoriels, de masques de fusion, de groupes, de calques de réglage ni de formats PSD dans l'atelier.
+- Le texte est éditable (contenu, taille, police, couleur), mais il n'y a pas encore de styles de paragraphe, de déformation ni de texte sur un tracé.
+- Pas d'outils de sélection, de lasso, de plume ni de pinceaux avancés.
 - L'historique est limité aux 10 dernières commandes.
 - La composition est locale au navigateur ; elle n'est pas incluse dans l'export `.json` du montage.
 
@@ -71,8 +75,9 @@
 - Coquille studio professionnelle : menus, onglets, palette `⌘K`, raccourcis `Alt+1…8`, barre d'état.
 - Création/déverrouillage du coffre, import de médias, persistance après rechargement.
 - Timeline multipiste, trim, split, suppression ripple, undo/redo, zoom, aimantation.
+- Recherche dans le pool média, transformation de clip, fondus image/audio, formes d'onde, scopes luma/vectorscope.
 - Étalonnage par clip visible au moniteur et à l'export, avec préréglages et undo/redo.
-- Atelier photo à calques : pinceau, gomme, formes, texte, remplissage, pipette, opacité, fusion, calques, undo/redo, persistance, export PNG.
+- Atelier photo à calques : pinceau, gomme, formes, texte éditable, remplissage, pipette, opacité, fusion, calques, undo/redo, persistance, export PNG.
 - Lecture temps réel avec audio et rendu canvas.
 - Export MP4/WebM téléchargé et relu.
 - Export/import de projet JSON.
@@ -85,10 +90,10 @@
 ## 4. Prochaines étapes recommandées
 
 1. **Rendu hors ligne** via FFmpeg (ou pipeline Python) pour des exports rapides, alpha et codecs maîtrisés.
-2. **Transitions et composition** : fondus, incrustation, modes de fusion, keyframes.
-3. **Étalonnage avancé** : courbes, LUT, scopes, masques couleur.
-4. **Photo** : édition de texte sur canvas, masques, groupes, import/export PSD.
-5. **Audio** : formes d'onde, vu-mètres, normalisation, fondus.
+2. **Transitions et keyframes** : fondus croisés, animation d'opacité, de volume, de transformation et d'étalonnage.
+3. **Étalonnage avancé** : courbes, LUT, RGB parade, histogramme, masques couleur.
+4. **Photo** : masques, groupes, sélections, import/export PSD.
+5. **Audio** : EQ, compresseur, vu-mètres, normalisation, automation.
 6. **Sous-titres** : import/export SRT, édition sur timeline.
 7. **Récupération** : sauvegarde automatique du projet, reprise après fermeture brutale.
 8. **Tests E2E automatisés** dans la CI (Playwright ou Electron + CDP) pour rejouer les scénarios de ce dossier.

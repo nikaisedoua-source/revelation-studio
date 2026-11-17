@@ -1,13 +1,14 @@
 # Révélation AI Studio
 
-Version 0.10.0 — scénario, storyboard, motion design, **montage vidéo multipiste**, **atelier photo à calques**, **étalonnage réel** et **espaces raccordés aux logiciels de création**.
+Version 0.11.0 — scénario, storyboard, motion design, **montage vidéo multipiste**, **atelier photo à calques**, **étalonnage et scopes réels** et **espaces raccordés aux logiciels de création**.
 
 - **Studio professionnel** : barre de menus, onglets d'espaces (Média, Montage, Photo, Étalonnage, VFX, Audio, IA Média, Livraison), palette `⌘K`, barre d'état et raccourcis `Alt+1…8`.
 - **Habillages par logiciel** : chaque espace reprend l'identité visuelle du logiciel auquel il est raccordé — Resolve (montage, couleur, livraison), Fairlight (audio), Photoshop (photo, texte, storyboard), After Effects (motion, VFX, graphiques), Blender (3D) et Premiere Pro (atelier film) — avec une barre d'identité réelle (état du pont, version, Tester / Ouvrir / Dossier / Hub).
 - **Hub de connexions réel** : la page Connexions liste les cinq logiciels détectés sur la machine, leur état vérifié par heartbeat, le dossier de pont et les actions réelles `POST /api/connections/{target}/activate|open|folder`. Aucun état « connecté » n'est affiché sans preuve.
-- **Éditeur timeline** : médias chiffrés, pistes V2/V1/A1/A2, trim, split, ripple, aimantation, undo/redo, lecture temps réel et export MP4/WebM.
-- **Étalonnage** : exposition, contraste, saturation et température par clip, visibles au moniteur et à l'export, avec préréglages.
-- **Atelier photo** : calques, pinceau, gomme, formes, texte, remplissage, pipette, opacité, modes de fusion, historique, persistance et export PNG.
+- **Éditeur timeline** : médias chiffrés et **recherche dans le pool**, pistes V2/V1/A1/A2, trim, split, ripple, aimantation, undo/redo, **transformation de clip** (position, échelle, rotation), **fondus entrée/sortie**, **formes d’onde audio**, lecture temps réel et export MP4/WebM.
+- **Étalonnage et scopes** : exposition, contraste, saturation et température par clip, visibles au moniteur et à l’export, avec préréglages ; **waveform luma et vectorscope Cb/Cr** superposés au moniteur.
+- **Atelier photo** : calques, pinceau, gomme, formes, **texte éditable** (police, taille, couleur), remplissage, pipette, opacité, modes de fusion, historique, persistance et export PNG.
+- **Comparaison honnête** avec Resolve, Photoshop, Premiere, After Effects et Fairlight : [TRAVAIL/09_COMPARAISON_RESOLVE_PHOTOSHOP.md](TRAVAIL/09_COMPARAISON_RESOLVE_PHOTOSHOP.md).
 - **IA honnête** : Ollama local réellement actif ; Tripo et Kling authentifiés (Tripo à 0 crédit) ; FreeLLMAPI configurable mais sans clé dans le profil audité. Voir [TRAVAIL/08_IA_ET_COMPTES.md](TRAVAIL/08_IA_ET_COMPTES.md).
 - **Édition Mac** : serveur Python local, rendu ProRes alpha, modèles installés et ponts After Effects, Photoshop, Resolve, Premiere et Blender selon leur configuration.
 - **Édition navigateur / PWA** : atelier film, références, historique, exports de projet, aperçu motion vidéo, animatique d’images et sources modifiables. Les projets restent dans un coffre chiffré propre au navigateur.
@@ -31,9 +32,9 @@ Ouvrir <http://127.0.0.1:8848>. Les applications sont détectées dans /Applicat
 
 ## Montage vidéo
 
-Ouvrir l'onglet **Montage** : importer des médias, les glisser sur la timeline (V1 pour la vidéo de base, V2 pour l'image/incrustation, A1/A2 pour le son), rogner par les poignées, couper avec `S`, supprimer avec `Maj+Suppr`, lire avec `Espace`, exporter avec **Exporter la vidéo**. Sélectionner un clip pour régler son **étalonnage** (exposition, contraste, saturation, température) dans l'inspecteur. Le projet et les médias restent dans le coffre chiffré ; **Projet .json** permet de transférer la structure.
+Ouvrir l'onglet **Montage** : importer des médias, les glisser sur la timeline (V1 pour la vidéo de base, V2 pour l'image/incrustation, A1/A2 pour le son), rogner par les poignées, couper avec `S`, supprimer avec `Maj+Suppr`, lire avec `Espace`, exporter avec **Exporter la vidéo**. Le champ de recherche du pool filtre les médias par nom. Sélectionner un clip pour régler dans l'inspecteur son **étalonnage** (exposition, contraste, saturation, température), sa **transformation** (X/Y, échelle 5–300 %, rotation −180…180°, préréglages Plein/Gauche/Droite) et ses **fondus entrée/sortie** — appliqués à l'image et au gain audio. Les clips audio affichent leur **forme d'onde** ; le bouton **Scopes** superpose une waveform luma et un vectorscope Cb/Cr au moniteur. Le projet et les médias restent dans le coffre chiffré ; **Projet .json** permet de transférer la structure.
 
-L'onglet **Photo** ouvre l'atelier à calques : pinceau, gomme, formes, texte, remplissage, pipette, calques avec opacité et fusion, historique, sauvegarde automatique et export PNG.
+L'onglet **Photo** ouvre l'atelier à calques : pinceau, gomme, formes, remplissage, pipette, calques avec opacité et fusion, historique, sauvegarde automatique et export PNG. Pour un calque texte, saisir le contenu, la taille, la police et la couleur dans le panneau de propriétés ; le canvas s'actualise en direct. Un double-clic sur le canvas place le curseur dans le champ texte. Les modifications de texte sont annulables comme les autres actions.
 
 ## Logiciels raccordés
 
@@ -89,6 +90,7 @@ Le Studio Mac est individuel et reste sur loopback. L’édition web est un coff
 ## Documentation et contrôles
 
 - [Dossier de travail](TRAVAIL/00_SOMMAIRE.md) — audit, architecture, décisions, journal, guide de montage, preuves, limites
+- [Comparaison avec Resolve, Photoshop, Premiere, After Effects et Fairlight](TRAVAIL/09_COMPARAISON_RESOLVE_PHOTOSHOP.md)
 - [IA et comptes — état réel](TRAVAIL/08_IA_ET_COMPTES.md)
 - [Guide général](LIRE_MOI.md)
 - [Atelier film](docs/ATELIER_FILM.md)
@@ -96,7 +98,7 @@ Le Studio Mac est individuel et reste sur loopback. L’édition web est un coff
 - [État opérationnel daté](docs/ETAT_OPERATIONNEL.md)
 
 ```sh
-npm test                 # 32 tests Node
+npm test                 # 35 tests Node
 npm run verify           # syntaxe + tests + build
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 29 tests Python
 ```

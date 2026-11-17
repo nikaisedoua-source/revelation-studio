@@ -61,11 +61,13 @@
 
 - Projet : `fps`, `width`, `height`, `tracks[]`, `clips[]`.
 - Pistes par défaut : **V2, V1, A1, A2** (vidéo en haut, audio en bas).
-- Un clip porte : `mediaId`, `trackId`, `start`, `duration`, `in`, `volume`, `opacity`, `kind`, `grade`.
+- Un clip porte : `mediaId`, `trackId`, `start`, `duration`, `in`, `volume`, `opacity`, `kind`, `grade`, `transform`, `fadeIn`, `fadeOut`.
 - Toute position est quantifiée à la frame (`1 / fps`) par le modèle.
 - `grade` normalise `exposure`, `contrast`, `saturation`, `temperature` dans `[-100, 100]`.
-- Opérations : déplacement, trim gauche/droite, split au playhead, suppression simple ou ripple, duplication, aimantation, zoom.
-- L'historique conserve des instantanés complets ; `Ctrl/⌘+Z` et `Ctrl/⌘+Shift+Z` restaurent l'état.
+- `transform` normalise `x`, `y` dans `[-1, 1]`, `scale` dans `[0.05, 5]` et `rotation` dans `[-180, 180]`.
+- `fadeIn` et `fadeOut` sont quantifiés à la frame et bornés à la durée du clip ; `fadeFactor(clip, t)` renvoie 0 au bord, 1 au centre.
+- Opérations : déplacement, trim gauche/droite, split au playhead, suppression simple ou ripple, duplication, aimantation, zoom. Le trim et le split conservent les fondus sur le bon bord.
+- L'historique conserve des instantanés complets (150 états) ; `Ctrl/⌘+Z` et `Ctrl/⌘+Shift+Z` restaurent l'état.
 
 ## 4. Persistance
 
@@ -161,6 +163,50 @@ Les habillages sont **cosmétiques** ; les états et les actions sont **réels**
 
 ## 9. Distribution
 
-- PWA : `manifest.webmanifest`, icônes 180/192/512, service worker versionné `revelation-web-0.10.0`.
+- PWA : `manifest.webmanifest`, icônes 180/192/512, service worker versionné `revelation-web-0.11.0`.
 - Electron : `electron-builder` produit `.dmg` + `.zip` macOS arm64, et configure NSIS + portable Windows ainsi qu'AppImage Linux.
 - Le nom du bundle macOS est volontairement **ASCII** (`Revelation Studio.app`) ; l'interface et le titre restent « Révélation ». Un bundle accentué provoquait un crash au démarrage sur la machine de test.
+
+## 10. Pipeline de rendu 0.11.0
+
+### 10.1 Image
+
+`drawFrame(time)` compose les pistes actives du bas vers le haut. Pour chaque clip visible :
+
+1. la source est dessinée dans un canvas hors écran à sa taille native ;
+2. `ctx.filter` applique l'étalonnage (`exposure`, `contrast`, `saturation`, `temperature`) ;
+3. `alpha = clip.opacity × fadeFactor(clip, time)` module la transparence ;
+4. `transformDraw` centre le clip, applique l'échelle, la translation normalisée et la rotation.
+
+Le même chemin sert au moniteur et à l'export `MediaRecorder` : aucun rendu séparé ne peut diverger.
+
+### 10.2 Audio
+
+`syncAt(time)` calcule le gain de chaque source WebAudio :
+
+```text
+gain = piste muette ? 0 : volume du clip × (clip muet ? 0 : 1) × fadeFactor(clip, time)
+```
+
+Les fondus sont donc audibles en lecture et inclus dans le flux audio capturé par l'export.
+
+### 10.3 Formes d'onde
+
+À l'import audio, `decodeAudioData` produit un tableau de 1 600 pics normalisés stocké avec le média. Après chaque rendu de timeline, `paintWaveforms()` dessine, pour chaque clip audio visible, la portion `in … in + durée` des pics dans un `<canvas class="ed-wave">` de la largeur du clip. Le dessin est purement visuel et ne modifie pas le média.
+
+### 10.4 Scopes
+
+`renderScopes(force)` copie le moniteur dans un canvas hors écran 320 × 180, puis :
+
+- la **waveform luma** place chaque pixel sur une colonne X et une hauteur Y proportionnelle à sa luminance ;
+- le **vectorscope** calcule Cb/Cr et place les pixels autour du centre, avec graticule et cibles R/M/B/C/G/Y.
+
+Le rendu est limité à un rafraîchissement toutes les 120 ms. Le panneau `.ed-scopes` est superposé au moniteur et basculé par `#ed-scopes-toggle` (`S.scopesOpen`).
+
+### 10.5 Pool média
+
+`S.filter` filtre les entrées par nom (insensible à la casse) dans `renderMedia`. Le compteur affiche `n/total` et un message explicite remplace la liste quand aucun média ne correspond. Le filtre est réinitialisé à la fermeture de l'éditeur.
+
+### 10.6 Texte photo
+
+Un calque texte conserve ses propriétés dans `layer.text` (contenu, taille, police, couleur) et son rendu dans le bitmap du calque. `snapshotText()` capture propriétés et pixels ; `commitText()` restaure le bitmap, applique les nouvelles propriétés, redessine et pousse une entrée d'historique `text`. L'undo restaure à la fois le bitmap et les propriétés, ce qui garantit un retour exact même après plusieurs modifications.

@@ -46,6 +46,8 @@
     return Math.min(high, Math.max(low, value));
   }
 
+  const DEFAULT_TRANSFORM = { x: 0, y: 0, scale: 1, rotation: 0 };
+
   function normalizeGrade(input) {
     const grade = input && typeof input === 'object' ? input : {};
     const value = (name) => (isFiniteNumber(grade[name]) ? clamp(grade[name], -100, 100) : 0);
@@ -54,6 +56,17 @@
       contrast: value('contrast'),
       saturation: value('saturation'),
       temperature: value('temperature')
+    };
+  }
+
+  function normalizeTransform(input) {
+    const transform = input && typeof input === 'object' ? input : {};
+    const value = (name, fallback, low, high) => (isFiniteNumber(transform[name]) ? clamp(transform[name], low, high) : fallback);
+    return {
+      x: value('x', 0, -1, 1),
+      y: value('y', 0, -1, 1),
+      scale: value('scale', 1, 0.05, 5),
+      rotation: value('rotation', 0, -180, 180)
     };
   }
 
@@ -140,6 +153,16 @@
     return clip.start + clip.duration;
   }
 
+  function fadeFactor(clip, time) {
+    const local = clamp(Number(time) - clip.start, 0, clip.duration);
+    let factor = 1;
+    const fadeIn = Math.max(0, Number(clip.fadeIn) || 0);
+    const fadeOut = Math.max(0, Number(clip.fadeOut) || 0);
+    if (fadeIn > 0) factor = Math.min(factor, local / fadeIn);
+    if (fadeOut > 0) factor = Math.min(factor, (clip.duration - local) / fadeOut);
+    return clamp(factor, 0, 1);
+  }
+
   function clipsOnTrack(project, trackId, ignoreId) {
     return project.clips
       .filter((clip) => clip.trackId === trackId && clip.id !== ignoreId)
@@ -202,6 +225,8 @@
     const start = quantize(project, Math.max(0, Number(input.start) || 0));
     const duration = quantize(project, Math.max(minDuration(project), Number(input.duration) || minDuration(project)));
     const inPoint = quantize(project, Math.max(0, Number(input.in) || 0));
+    const fadeIn = quantize(project, clamp(isFiniteNumber(input.fadeIn) ? input.fadeIn : 0, 0, duration));
+    const fadeOut = quantize(project, clamp(isFiniteNumber(input.fadeOut) ? input.fadeOut : 0, 0, duration));
     return {
       id: input.id || uid('clip'),
       trackId: input.trackId,
@@ -216,6 +241,9 @@
       opacity: isFiniteNumber(input.opacity) ? clamp(input.opacity, 0, 1) : 1,
       volume: isFiniteNumber(input.volume) ? clamp(input.volume, 0, 2) : 1,
       muted: Boolean(input.muted),
+      fadeIn,
+      fadeOut,
+      transform: normalizeTransform(input.transform),
       grade: normalizeGrade(input.grade)
     };
   }
@@ -318,6 +346,8 @@
     } else {
       clip.duration = quantize(project, target - clip.start);
     }
+    clip.fadeIn = Math.min(clip.fadeIn, clip.duration);
+    clip.fadeOut = Math.min(clip.fadeOut, clip.duration);
     validateClip(project, clip, clip.id);
     project.updatedAt = Date.now();
     return clip;
@@ -347,6 +377,10 @@
       in: quantize(project, clip.in + (point - clip.start))
     };
     clip.duration = quantize(project, point - clip.start);
+    clip.fadeIn = Math.min(clip.fadeIn, clip.duration);
+    clip.fadeOut = 0;
+    right.fadeIn = 0;
+    right.fadeOut = Math.min(right.fadeOut, right.duration);
     validateClip(project, clip, clip.id);
     project.clips.push(right);
     sortClips(project);
@@ -399,6 +433,9 @@
     if (typeof patch.volume === 'number') clip.volume = clamp(patch.volume, 0, 2);
     if (typeof patch.muted === 'boolean') clip.muted = patch.muted;
     if (patch.grade && typeof patch.grade === 'object') clip.grade = normalizeGrade({ ...clip.grade, ...patch.grade });
+    if (patch.transform && typeof patch.transform === 'object') clip.transform = normalizeTransform({ ...clip.transform, ...patch.transform });
+    if (patch.fadeIn !== undefined) clip.fadeIn = quantize(project, clamp(Number(patch.fadeIn) || 0, 0, clip.duration));
+    if (patch.fadeOut !== undefined) clip.fadeOut = quantize(project, clamp(Number(patch.fadeOut) || 0, 0, clip.duration));
     if (patch.start !== undefined || patch.duration !== undefined || patch.in !== undefined) {
       const start = quantize(project, Math.max(0, Number(patch.start ?? clip.start)));
       const duration = quantize(project, Math.max(minDuration(project), Number(patch.duration ?? clip.duration)));
@@ -408,6 +445,8 @@
       clip.start = start;
       clip.duration = duration;
       clip.in = inPoint;
+      clip.fadeIn = Math.min(clip.fadeIn, clip.duration);
+      clip.fadeOut = Math.min(clip.fadeOut, clip.duration);
     }
     if (patch.trackId && patch.trackId !== clip.trackId) {
       moveClip(project, clipId, { trackId: patch.trackId, start: clip.start });
@@ -564,11 +603,14 @@
     EPS,
     DEFAULTS,
     MAX_IMAGE_DURATION,
+    DEFAULT_TRANSFORM,
     uid,
     clone,
     clamp,
     quantize,
     minDuration,
+    normalizeTransform,
+    fadeFactor,
     createProject,
     getTrack,
     trackIndex,

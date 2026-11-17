@@ -79,3 +79,4 @@
 .ph-canvas-area:not(.fit) .ph-canvas-frame{margin:0}
 @media(max-width:1180px){.ph-body{grid-template-columns:46px minmax(0,1fr) 260px}}
 @media(max-width:900px){.ph-body{grid-template-columns:42px minmax(0,1fr)}.ph-panels{display:none}.ph-docname{width:140px!important}.ph-optionsbar{min-height:0}}
+.ph-prop-row input[type=color]{width:100%;height:24px;background:#101318;border:1px solid #343943;border-radius:3px;padding:2px}

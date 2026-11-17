@@ -331,3 +331,137 @@ npm run dist:mac
 | `release/Revelation-Studio-0.10.0-arm64.zip` | 117 316 854 octets | `2c867bcc538fe3ce4673b134f1e9017eb004c49be6592b65d86bff56f6c1bb13` |
 
 Le binaire packagé a été lancé directement : le serveur local `127.0.0.1:41888` a répondu **HTTP 200**, puis le processus a été arrêté. Le paquet reste non signé/non notarié (aucune identité Developer ID disponible).
+
+## 8. Passe 0.11.0 — preuves des nouveaux outils
+
+### 8.1 Tests automatisés
+
+```sh
+npm test
+```
+
+```text
+ℹ tests 35
+ℹ pass 35
+ℹ fail 0
+```
+
+Les trois nouveaux cas couvrent :
+
+- normalisation de `transform`, `fadeIn`, `fadeOut` et aller-retour dans un projet sérialisé ;
+- rampe de `fadeFactor` : 0 au bord, 0,5 à mi-fondu, 1 au centre ;
+- conservation des fondus sur le bon bord après `splitClip` et `trimClipTo`.
+
+```sh
+.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+```
+
+```text
+Ran 29 tests in 0.056s
+OK
+```
+
+### 8.2 Fondu image
+
+Scénario navigateur : un clip image sur V1, fondu entrée réglé, playhead déplacé.
+
+| Position | Échantillons peints sur le moniteur |
+| --- | --- |
+| Avant fondu, milieu du clip | 291 600 |
+| t = 0 (début du fondu) | 0 |
+| t = moitié du fondu | 35 332 |
+
+Le coin de fondu gauche est présent dans le DOM du clip. L'opacité suit donc réellement la rampe, elle n'est pas seulement affichée.
+
+### 8.3 Transformation
+
+Réglage : échelle 0,5 et X = 0,3. La valeur est relue dans le modèle après transaction. Les échantillons peints passent de 291 600 à **8 831**, ce qui confirme un changement visuel réel et non un simple stockage.
+
+### 8.4 Forme d'onde audio
+
+Un clip audio importé affiche un `<canvas class="ed-wave">` de la largeur du clip. Comptage des pixels non transparents : **1 764**. La forme d'onde est donc dessinée depuis les pics du média, pas un motif décoratif.
+
+### 8.5 Scopes
+
+Après activation du bouton **Scopes** :
+
+| Scope | Pixels allumés |
+| --- | --- |
+| Waveform luma | 1 599 |
+| Vectorscope Cb/Cr | 968 |
+
+Le panneau `.ed-scopes` est visible et superposé au moniteur ; le bouton porte la classe active. Le rafraîchissement est limité à 120 ms.
+
+### 8.6 Recherche média
+
+| Action | Résultat observé |
+| --- | --- |
+| Saisie « plan » | 1 résultat sur 2, compteur `1/2` |
+| Saisie « zzz » | 0 résultat, message « Aucun média ne correspond à « zzz ». » |
+| Effacement | 2 résultats restaurés |
+
+### 8.7 Fondu audio
+
+Gain mesuré sur la source WebAudio pendant la lecture d'un clip avec fondu entrée de 1 s :
+
+| Temps | Gain |
+| --- | --- |
+| 0 s | 0 |
+| 0,5 s | 0,5 |
+| 1,5 s | 1 |
+
+Après undo, `fadeIn` revient à 0. Le fondu agit donc sur le son réellement joué et exporté.
+
+### 8.8 Texte photo
+
+1. calque texte initial « RÉVÉLATION » ;
+2. saisie de « STUDIO TEST » dans le champ : le canvas est mis à jour en direct ;
+3. une entrée d'historique **Texte** est créée ;
+4. **Annuler** restaure le texte « RÉVÉLATION » **et** le hash exact du canvas d'origine (`undoRestored: true`).
+
+### 8.9 Syntaxe et build
+
+```sh
+node --check web/editor.js
+node --check web/photo-editor.js
+```
+
+Aucun message.
+
+```sh
+npm run verify
+```
+
+```text
+tests 35 · pass 35 · fail 0
+{"files": 26, "bytes": 490910}
+```
+
+Le build 0.11.0 contient 26 fichiers pour 490 910 octets.
+
+### 8.10 Paquet macOS 0.11.0
+
+```sh
+npm run dist:mac
+```
+
+| Fichier | Taille | SHA-256 |
+| --- | --- | --- |
+| `release/Revelation-Studio-0.11.0-arm64.dmg` | 120 832 452 octets | `7fcf35ec537bdef8b692546f9ba38edeab39d1e12eef7b001f2c3f262af40c7f` |
+| `release/Revelation-Studio-0.11.0-arm64.zip` | 117 321 607 octets | `bc57fe743d9dc04584fc75f8f58809b15b367a58909125fd14ab47a4fca7b5a0` |
+
+Le binaire packagé a été lancé directement avec `REVELATION_PORT=41911` : le serveur local a répondu **HTTP 200** et `version.json` a renvoyé `0.11.0`. Le processus a ensuite été arrêté. Le paquet reste non signé/non notarié (aucune identité Developer ID disponible).
+
+### 8.11 Test navigateur du build 0.11.0
+
+Service statique local sur `127.0.0.1:8860`, build `web-online/dist/` servi tel quel :
+
+| Contrôle | Résultat |
+| --- | --- |
+| Éditeur chargé | canvas, timeline, 6 clips et 4 médias restaurés |
+| Inspecteur clip | champs `#ed-clip-fadein`, `#ed-clip-fadeout`, `#ed-tr-x`, `#ed-tr-scale`, `#ed-tr-rotation` présents |
+| Scopes | panneau masqué au départ, visible après clic, bouton actif, canvas alimentés (`waveLit` 31 200, `vectorLit` 14 640) |
+| Recherche | 4 médias → saisie « zzz » → 0 + message vide → effacement → 4 restaurés |
+| Photo | 3 calques restaurés, 8 outils, champs `#ph-text-value`, `#ph-text-size`, `#ph-text-font`, `#ph-text-color` présents |
+
+Aucun de ces contrôles n'est décoratif : chacun est relié au modèle ou au rendu décrit dans [02_ARCHITECTURE.md](02_ARCHITECTURE.md).

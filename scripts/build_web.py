@@ -3,7 +3,7 @@ import json,re,shutil,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from app import cinema,catalog,providers
-VERSION='0.10.0'
+VERSION='0.11.0'
 DEST=ROOT/'web-online/dist';DEST.mkdir(parents=True,exist_ok=True)
 for name in ['studio.js','studio.css','film.js','integrations.js','return-to-studio.js','editor-model.js','editor.js','editor.css','studio-pro.css','photo.css','photo-editor.js','shell.js','workspaces-pro.js','workspaces-pro.css']:
  text=(ROOT/'web'/name).read_text().replace('/Users/decassan/Documents/Révélation Studio','Compagnon Mac').replace('/Volumes/Samsung T7/IA_STUDIO_2026','Stockage du compagnon Mac')

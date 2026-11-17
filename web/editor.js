@@ -32,6 +32,11 @@
     playing: false,
     scale: 80,
     snap: true,
+    filter: '',
+    scopesOpen: false,
+    scopeLast: 0,
+    scopeSource: null,
+    scopePlots: {},
     dirty: false,
     saveTimer: 0,
     raf: 0,
@@ -328,6 +333,47 @@
     }
   }
 
+  async function ensurePeaks(entry) {
+    if (!entry || entry.kind !== 'audio' || entry.peaks || entry.peaksLoading || entry.peaksError) return entry && entry.peaks;
+    entry.peaksLoading = true;
+    let ctx = S.audioCtx;
+    let temporary = false;
+    try {
+      if (!ctx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) throw new Error('Audio non disponible');
+        ctx = new Ctx();
+        temporary = true;
+      }
+      const response = await fetch(entry.url);
+      const buffer = await response.arrayBuffer();
+      const audio = await ctx.decodeAudioData(buffer);
+      const data = audio.getChannelData(0);
+      const count = 1600;
+      const peaks = new Float32Array(count);
+      const step = Math.max(1, Math.floor(data.length / count));
+      for (let index = 0; index < count; index += 1) {
+        const from = index * step;
+        const to = Math.min(data.length, from + step);
+        let peak = 0;
+        for (let cursor = from; cursor < to; cursor += 1) {
+          const value = Math.abs(data[cursor]);
+          if (value > peak) peak = value;
+        }
+        peaks[index] = peak;
+      }
+      entry.peaks = peaks;
+      entry.peaksDuration = audio.duration || entry.duration;
+      if (S.mounted && S.project) paintWaveforms();
+    } catch (error) {
+      entry.peaksError = true;
+    } finally {
+      entry.peaksLoading = false;
+      if (temporary && ctx && ctx.close) ctx.close().catch(() => {});
+    }
+    return entry.peaks;
+  }
+
   async function importFiles(files) {
     const list = Array.from(files || []);
     if (!list.length) return;
@@ -359,6 +405,7 @@
           entry.image = await loadImage(url);
         }
         S.media.set(id, entry);
+        if (entry.kind === 'audio') ensurePeaks(entry);
         entry.thumb = await makeThumbnail(entry);
         media.thumb = entry.thumb;
         await dbPut(STORE_MEDIA, {
@@ -442,6 +489,7 @@
         if (entry.kind === 'image') entry.image = await loadImage(url);
         if (!entry.thumb) entry.thumb = await makeThumbnail(entry);
         S.media.set(entry.id, entry);
+        if (entry.kind === 'audio') ensurePeaks(entry);
       } catch (error) {
         console.warn('Média non déchiffré :', record.id, error.message);
       }
@@ -494,6 +542,7 @@
     <aside class="ed-panel ed-media-panel">
       <div class="ed-panel-head"><h3>Médias</h3><span id="ed-media-count" class="ed-pill">0</span></div>
       <button class="ed-btn ed-btn-primary" id="ed-import-media-2">＋ Importer</button>
+      <input id="ed-media-search" class="ed-search" type="search" placeholder="Rechercher un média…" autocomplete="off" aria-label="Rechercher un média">
       <div id="ed-media-list" class="ed-media-list"></div>
       <p class="ed-note" id="ed-storage-note"></p>
     </aside>
@@ -501,6 +550,10 @@
       <div class="ed-canvas-wrap" id="ed-canvas-wrap">
         <canvas id="ed-canvas"></canvas>
         <div class="ed-canvas-empty" id="ed-canvas-empty">Importe un média puis glisse-le sur la timeline.</div>
+        <div class="ed-scopes" id="ed-scopes" hidden>
+          <div class="ed-scope"><span>WFM · LUMA</span><canvas id="ed-scope-wave" width="260" height="120"></canvas></div>
+          <div class="ed-scope compact"><span>VECTORSCOPE</span><canvas id="ed-scope-vector" width="122" height="120"></canvas></div>
+        </div>
         <div class="ed-export-overlay" id="ed-export-overlay" hidden>
           <div class="ed-export-box">
             <strong>Export en cours</strong>
@@ -518,6 +571,7 @@
         <span class="ed-tc ed-dim" id="ed-duration">00:00:00:00</span>
         <button class="ed-btn" id="ed-split-btn" title="Couper au playhead (S)">Couper</button>
         <button class="ed-btn" id="ed-delete-btn" title="Supprimer (Suppr)">Supprimer</button>
+        <button class="ed-btn" id="ed-scopes-toggle" title="Waveform et vectorscope comme dans Resolve">Scopes</button>
         <label class="ed-check"><input type="checkbox" id="ed-snap" checked> Aimant</label>
       </div>
     </section>
@@ -554,13 +608,17 @@
   function renderMedia() {
     const list = $('#ed-media-list');
     if (!list) return;
-    const entries = Array.from(S.media.values()).sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
-    $('#ed-media-count').textContent = String(entries.length);
+    const allEntries = Array.from(S.media.values()).sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+    const query = S.filter.trim().toLowerCase();
+    const entries = query ? allEntries.filter((entry) => entry.name.toLowerCase().includes(query)) : allEntries;
+    $('#ed-media-count').textContent = query ? `${entries.length}/${allEntries.length}` : String(allEntries.length);
     $('#ed-storage-note').textContent = vault()
       ? 'Médias chiffrés (AES-GCM) dans ce navigateur. Le mot de passe du coffre les protège.'
       : 'Stockage local du navigateur. Reconnecte-toi au Studio pour chiffrer les nouveaux médias.';
     if (!entries.length) {
-      list.innerHTML = '<div class="ed-empty">Aucun média. Importe une vidéo, une image ou un son.</div>';
+      list.innerHTML = allEntries.length
+        ? `<div class="ed-empty">Aucun média ne correspond à « ${esc(S.filter.trim())} ».</div>`
+        : '<div class="ed-empty">Aucun média. Importe une vidéo, une image ou un son.</div>';
       return;
     }
     list.innerHTML = entries.map((entry) => {
@@ -668,6 +726,7 @@
     bindTimelinePointer();
     bindTrackButtons();
     bindLaneDrop();
+    paintWaveforms();
   }
 
   function clipMarkup(clip, track) {
@@ -680,11 +739,47 @@
     const detail = missing
       ? esc(clip.mediaName || 'fichier absent')
       : `${M.timecode(clip.in, S.project.fps)} → ${M.timecode(clip.in + clip.duration, S.project.fps)}`;
+    const fadeIn = Number(clip.fadeIn) || 0;
+    const fadeOut = Number(clip.fadeOut) || 0;
+    const fadeSpan = (value) => Math.max(3, Math.round((value / Math.max(0.001, clip.duration)) * 100));
+    const wave = clip.kind === 'audio' && !missing
+      ? `<canvas class="ed-wave" data-clip-id="${esc(clip.id)}" width="${Math.min(4096, Math.max(2, Math.round(width)))}" height="50"></canvas>`
+      : '';
     return `<div class="ed-clip ${kind}${selected}${missing}${track.locked ? ' locked' : ''}" data-clip-id="${esc(clip.id)}" style="left:${left}px;width:${width}px">
+      ${wave}
+      ${fadeIn > 0 ? `<div class="ed-fade left" style="width:${fadeSpan(fadeIn)}%"></div>` : ''}
+      ${fadeOut > 0 ? `<div class="ed-fade right" style="width:${fadeSpan(fadeOut)}%"></div>` : ''}
       <div class="ed-clip-handle left" data-trim="left"></div>
       <div class="ed-clip-body"><strong>${esc(label)}</strong><small>${esc(detail)}</small></div>
       <div class="ed-clip-handle right" data-trim="right"></div>
     </div>`;
+  }
+
+  function paintWaveforms() {
+    if (!S.project) return;
+    const canvases = $$('#ed-rows canvas.ed-wave');
+    for (const canvas of canvases) {
+      const clip = M.getClip(S.project, canvas.dataset.clipId);
+      const entry = clip ? S.media.get(clip.mediaId) : null;
+      const peaks = entry && entry.peaks;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+      const width = canvas.width;
+      const height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+      if (!peaks || !peaks.length) continue;
+      const total = Math.max(0.001, entry.peaksDuration || Number(clip.mediaDuration) || 1);
+      const from = M.clamp(clip.in / total, 0, 1);
+      const to = M.clamp((clip.in + clip.duration) / total, 0, 1);
+      const mid = height / 2;
+      ctx.fillStyle = 'rgba(197, 240, 209, 0.62)';
+      for (let x = 0; x < width; x += 1) {
+        const fraction = width <= 1 ? from : from + (to - from) * (x / (width - 1));
+        const index = Math.min(peaks.length - 1, Math.max(0, Math.floor(fraction * peaks.length)));
+        const amplitude = Math.min(1, peaks[index] * 1.5) * (mid - 1);
+        ctx.fillRect(x, mid - amplitude, 1, Math.max(1, amplitude * 2));
+      }
+    }
   }
 
   function positionPlayhead() {
@@ -742,6 +837,8 @@
     const mediaEntry = S.media.get(clip.mediaId);
     const missing = !mediaEntry;
     const grade = clip.grade || { exposure: 0, contrast: 0, saturation: 0, temperature: 0 };
+    const transform = clip.transform || M.DEFAULT_TRANSFORM;
+    const frameStep = (1 / S.project.fps).toFixed(4);
     const gv = (name) => Math.round(Number(grade[name]) || 0);
     const gradeSlider = (name, label) => `<div class="ed-grade-row"><label for="ed-grade-${name}">${label}<span id="ed-grade-${name}-value">${gv(name) > 0 ? '+' : ''}${gv(name)}</span></label><input id="ed-grade-${name}" data-grade="${name}" type="range" min="-100" max="100" step="1" value="${gv(name)}"></div>`;
     panel.innerHTML = `<div class="ed-panel-head"><h3>Clip</h3><button class="ed-mini" id="ed-insp-close" title="Désélectionner">×</button></div>
@@ -754,12 +851,32 @@
         <div class="ed-field"><label>Durée (s)</label><input id="ed-clip-duration" type="number" min="${(1 / S.project.fps).toFixed(4)}" step="${(1 / S.project.fps).toFixed(4)}" value="${clip.duration.toFixed(3)}"></div>
       </div>
       <div class="ed-two">
-        <div class="ed-field"><label>Entrée source (s)</label><input id="ed-clip-in" type="number" min="0" step="${(1 / S.project.fps).toFixed(4)}" value="${clip.in.toFixed(3)}"></div>
+        <div class="ed-field"><label>Entrée source (s)</label><input id="ed-clip-in" type="number" min="0" step="${frameStep}" value="${clip.in.toFixed(3)}"></div>
         <div class="ed-field"><label>Sortie source</label><input value="${(clip.in + clip.duration).toFixed(3)} s" disabled></div>
+      </div>
+      <div class="ed-two">
+        <div class="ed-field"><label>Fondu entrée (s)</label><input id="ed-clip-fadein" type="number" min="0" max="${clip.duration.toFixed(3)}" step="${frameStep}" value="${clip.fadeIn.toFixed(3)}"></div>
+        <div class="ed-field"><label>Fondu sortie (s)</label><input id="ed-clip-fadeout" type="number" min="0" max="${clip.duration.toFixed(3)}" step="${frameStep}" value="${clip.fadeOut.toFixed(3)}"></div>
       </div>
       ${clip.kind === 'audio' ? '' : `<div class="ed-field"><label>Opacité <span id="ed-opacity-value">${Math.round(clip.opacity * 100)} %</span></label><input id="ed-clip-opacity" type="range" min="0" max="1" step="0.01" value="${clip.opacity}"></div>`}
       <div class="ed-field"><label>Volume <span id="ed-volume-value">${Math.round(clip.volume * 100)} %</span></label><input id="ed-clip-volume" type="range" min="0" max="2" step="0.01" value="${clip.volume}"></div>
       <label class="ed-check"><input type="checkbox" id="ed-clip-muted" ${clip.muted ? 'checked' : ''}> Couper le son du clip</label>
+      ${clip.kind === 'audio' ? '' : `<div class="ed-grade">
+        <div class="ed-grade-head"><h4>Transformation</h4><button type="button" class="ed-btn ed-reset" id="ed-transform-reset">Réinitialiser</button></div>
+        <div class="ed-two">
+          <div class="ed-field"><label>Position X</label><input id="ed-tr-x" type="number" min="-1" max="1" step="0.01" value="${transform.x.toFixed(2)}"></div>
+          <div class="ed-field"><label>Position Y</label><input id="ed-tr-y" type="number" min="-1" max="1" step="0.01" value="${transform.y.toFixed(2)}"></div>
+        </div>
+        <div class="ed-two">
+          <div class="ed-field"><label>Échelle</label><input id="ed-tr-scale" type="range" min="0.05" max="3" step="0.01" value="${transform.scale}"></div>
+          <div class="ed-field"><label>Rotation</label><input id="ed-tr-rotation" type="range" min="-180" max="180" step="1" value="${transform.rotation}"></div>
+        </div>
+        <div class="ed-actions" style="grid-template-columns:repeat(3,1fr)">
+          <button type="button" class="ed-btn" data-tr-preset="plein">Plein cadre</button>
+          <button type="button" class="ed-btn" data-tr-preset="gauche">Gauche</button>
+          <button type="button" class="ed-btn" data-tr-preset="droite">Droite</button>
+        </div>
+      </div>`}
       ${clip.kind === 'audio' ? '' : `<div class="ed-grade">
         <div class="ed-grade-head"><h4>Étalonnage</h4><span>Canvas + export</span></div>
         ${gradeSlider('exposure', 'Exposition')}
@@ -890,7 +1007,11 @@
       const target = clipTargetTime(clip, time);
       const limit = Number.isFinite(clip.mediaDuration) && clip.mediaDuration > 0 ? clip.mediaDuration : node.el.duration;
       const safeTarget = Math.max(0, Math.min(Number.isFinite(limit) ? Math.max(0, limit - 0.02) : target, target));
-      if (node.gain) node.gain.gain.value = track && track.muted ? 0 : clip.volume * (clip.muted ? 0 : 1);
+      if (node.gain) {
+        const fade = M.fadeFactor(clip, time);
+        const gain = track && track.muted ? 0 : clip.volume * (clip.muted ? 0 : 1) * fade;
+        node.gain.gain.value = gain;
+      }
       if (!isActive) {
         if (!node.el.paused) node.el.pause();
         continue;
@@ -941,13 +1062,15 @@
     let painted = false;
     for (const item of active) {
       const clip = item.clip;
+      const alpha = M.clamp((Number(clip.opacity) || 0) * M.fadeFactor(clip, time), 0, 1);
+      if (alpha <= 0) continue;
       if (clip.kind === 'image') {
         const entry = S.media.get(clip.mediaId);
         if (entry && entry.image && entry.image.complete) {
           ctx.save();
-          ctx.globalAlpha = clip.opacity;
+          ctx.globalAlpha = alpha;
           ctx.filter = gradeFilter(clip);
-          containDraw(ctx, entry.image, entry.image.naturalWidth, entry.image.naturalHeight, canvas.width, canvas.height);
+          transformDraw(ctx, entry.image, entry.image.naturalWidth, entry.image.naturalHeight, canvas, clip);
           ctx.restore();
           painted = true;
         }
@@ -958,9 +1081,9 @@
       const node = S.nodes.get(clip.id);
       if (node && node.el.readyState >= 2 && node.el.videoWidth) {
         ctx.save();
-        ctx.globalAlpha = clip.opacity;
+        ctx.globalAlpha = alpha;
         ctx.filter = gradeFilter(clip);
-        containDraw(ctx, node.el, node.el.videoWidth, node.el.videoHeight, canvas.width, canvas.height);
+        transformDraw(ctx, node.el, node.el.videoWidth, node.el.videoHeight, canvas, clip);
         ctx.restore();
         painted = true;
       }
@@ -968,14 +1091,125 @@
     ctx.filter = 'none';
     const empty = $('#ed-canvas-empty');
     if (empty) empty.hidden = painted || active.length > 0;
+    renderScopes(false);
   }
 
-  function containDraw(ctx, source, width, height, canvasWidth, canvasHeight) {
+  function transformDraw(ctx, source, width, height, canvas, clip) {
     if (!width || !height) return;
-    const scale = Math.min(canvasWidth / width, canvasHeight / height);
+    const transform = clip.transform || M.DEFAULT_TRANSFORM;
+    const scale = Math.min(canvas.width / width, canvas.height / height) * transform.scale;
     const drawWidth = width * scale;
     const drawHeight = height * scale;
-    ctx.drawImage(source, (canvasWidth - drawWidth) / 2, (canvasHeight - drawHeight) / 2, drawWidth, drawHeight);
+    ctx.translate(canvas.width / 2 + (transform.x * canvas.width) / 2, canvas.height / 2 + (transform.y * canvas.height) / 2);
+    if (transform.rotation) ctx.rotate((transform.rotation * Math.PI) / 180);
+    ctx.drawImage(source, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+  }
+
+  /* ------------------------------------------------------------------ scopes */
+
+  function ensureScopeSource() {
+    if (!S.scopeSource) {
+      S.scopeSource = document.createElement('canvas');
+      S.scopeSource.width = 320;
+      S.scopeSource.height = 180;
+    }
+    return S.scopeSource;
+  }
+
+  function renderScopes(force) {
+    const panel = $('#ed-scopes');
+    if (!panel || panel.hidden) return;
+    const now = performance.now();
+    if (!force && now - S.scopeLast < 120) return;
+    S.scopeLast = now;
+    const canvas = $('#ed-canvas');
+    const wave = $('#ed-scope-wave');
+    const vector = $('#ed-scope-vector');
+    if (!canvas || !wave || !vector || !canvas.width || !canvas.height) return;
+    const source = ensureScopeSource();
+    const sourceCtx = source.getContext('2d', { willReadFrequently: true });
+    sourceCtx.drawImage(canvas, 0, 0, source.width, source.height);
+    const pixels = sourceCtx.getImageData(0, 0, source.width, source.height).data;
+
+    const waveCtx = wave.getContext('2d');
+    const ww = wave.width;
+    const wh = wave.height;
+    waveCtx.clearRect(0, 0, ww, wh);
+    waveCtx.fillStyle = '#05070a';
+    waveCtx.fillRect(0, 0, ww, wh);
+    waveCtx.strokeStyle = 'rgba(120, 180, 140, 0.18)';
+    waveCtx.lineWidth = 1;
+    for (let row = 1; row < 4; row += 1) {
+      const y = (wh / 4) * row;
+      waveCtx.beginPath();
+      waveCtx.moveTo(0, y + 0.5);
+      waveCtx.lineTo(ww, y + 0.5);
+      waveCtx.stroke();
+    }
+    waveCtx.fillStyle = 'rgba(180, 235, 195, 0.34)';
+    for (let sy = 0; sy < source.height; sy += 2) {
+      for (let sx = 0; sx < source.width; sx += 2) {
+        const offset = (sy * source.width + sx) * 4;
+        const luma = (0.2126 * pixels[offset] + 0.7152 * pixels[offset + 1] + 0.0722 * pixels[offset + 2]) / 255;
+        const x = (sx / (source.width - 1)) * (ww - 1);
+        const y = (1 - luma) * (wh - 1);
+        waveCtx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    const vectorCtx = vector.getContext('2d');
+    const vw = vector.width;
+    const vh = vector.height;
+    vectorCtx.clearRect(0, 0, vw, vh);
+    vectorCtx.fillStyle = '#05070a';
+    vectorCtx.fillRect(0, 0, vw, vh);
+    const cx = vw / 2;
+    const cy = vh / 2;
+    const radius = Math.min(cx, cy) - 6;
+    vectorCtx.strokeStyle = 'rgba(130, 170, 200, 0.22)';
+    vectorCtx.beginPath();
+    vectorCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+    vectorCtx.stroke();
+    vectorCtx.beginPath();
+    vectorCtx.moveTo(cx - radius, cy);
+    vectorCtx.lineTo(cx + radius, cy);
+    vectorCtx.moveTo(cx, cy - radius);
+    vectorCtx.lineTo(cx, cy + radius);
+    vectorCtx.stroke();
+    const targets = [['R', 103.5], ['M', 61], ['B', 347], ['C', 283], ['G', 241], ['Y', 167]];
+    vectorCtx.font = '7px ui-monospace, Menlo, monospace';
+    for (const [label, angle] of targets) {
+      const radians = (angle * Math.PI) / 180;
+      const tx = cx + Math.cos(radians) * (radius - 8);
+      const ty = cy - Math.sin(radians) * (radius - 8);
+      vectorCtx.fillStyle = 'rgba(190, 200, 215, 0.5)';
+      vectorCtx.fillText(label, tx - 2, ty + 2);
+    }
+    vectorCtx.fillStyle = 'rgba(215, 210, 245, 0.4)';
+    const unit = radius / 0.5;
+    for (let sy = 0; sy < source.height; sy += 2) {
+      for (let sx = 0; sx < source.width; sx += 2) {
+        const offset = (sy * source.width + sx) * 4;
+        const r = pixels[offset] / 255;
+        const g = pixels[offset + 1] / 255;
+        const b = pixels[offset + 2] / 255;
+        const cb = -0.1687 * r - 0.3313 * g + 0.5 * b;
+        const cr = 0.5 * r - 0.4187 * g - 0.0813 * b;
+        const x = cx + cb * unit;
+        const y = cy - cr * unit;
+        if (x < 0 || x >= vw || y < 0 || y >= vh) continue;
+        vectorCtx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+
+  function toggleScopes() {
+    S.scopesOpen = !S.scopesOpen;
+    const panel = $('#ed-scopes');
+    const button = $('#ed-scopes-toggle');
+    if (panel) panel.hidden = !S.scopesOpen;
+    if (button) button.classList.toggle('ed-active', S.scopesOpen);
+    if (S.scopesOpen) renderScopes(true);
   }
 
   function duration() {
@@ -1702,17 +1936,71 @@
     $('#ed-clip-start').onchange = (event) => updateSelected({ start: Number(event.target.value) });
     $('#ed-clip-duration').onchange = (event) => updateSelected({ duration: Number(event.target.value) });
     $('#ed-clip-in').onchange = (event) => updateSelected({ in: Number(event.target.value) });
+    const fadeIn = $('#ed-clip-fadein');
+    if (fadeIn) fadeIn.onchange = (event) => updateSelected({ fadeIn: Number(event.target.value) });
+    const fadeOut = $('#ed-clip-fadeout');
+    if (fadeOut) fadeOut.onchange = (event) => updateSelected({ fadeOut: Number(event.target.value) });
     const opacity = $('#ed-clip-opacity');
     if (opacity) opacity.onchange = (event) => updateSelected({ opacity: Number(event.target.value) });
     const volume = $('#ed-clip-volume');
     if (volume) volume.onchange = (event) => updateSelected({ volume: Number(event.target.value) });
     const muted = $('#ed-clip-muted');
     if (muted) muted.onchange = (event) => updateSelected({ muted: event.target.checked });
+    bindTransform(clip);
     bindGrade(clip);
     $('#ed-clip-split').onclick = splitAtPlayhead;
     $('#ed-clip-duplicate').onclick = duplicateSelected;
     $('#ed-clip-delete').onclick = () => deleteSelected(false);
     $('#ed-clip-ripple').onclick = () => deleteSelected(true);
+  }
+
+  function bindTransform(clip) {
+    const names = ['x', 'y', 'scale', 'rotation'];
+    const inputs = names.map((name) => $(`#ed-tr-${name}`)).filter(Boolean);
+    if (!inputs.length) return;
+    const read = () => {
+      const next = M.clone(clip.transform || M.DEFAULT_TRANSFORM);
+      for (const input of inputs) next[input.id.replace('ed-tr-', '')] = Number(input.value);
+      return next;
+    };
+    let pending = null;
+    for (const input of inputs) {
+      input.oninput = () => {
+        if (!pending) pending = M.clone(clip.transform || M.DEFAULT_TRANSFORM);
+        const live = M.getClip(S.project, clip.id);
+        if (live) live.transform = M.normalizeTransform(read());
+        drawFrame(S.playhead);
+      };
+      input.onchange = () => {
+        const final = read();
+        const before = pending || M.clone(clip.transform || M.DEFAULT_TRANSFORM);
+        pending = null;
+        const live = M.getClip(S.project, clip.id);
+        if (live) live.transform = M.normalizeTransform(before);
+        const ok = commit(() => M.updateClip(S.project, clip.id, { transform: final }));
+        if (ok) refreshAfterCommit(); else drawFrame(S.playhead);
+      };
+    }
+    const reset = $('#ed-transform-reset');
+    if (reset) {
+      reset.onclick = () => {
+        const ok = commit(() => M.updateClip(S.project, clip.id, { transform: M.DEFAULT_TRANSFORM }));
+        if (ok) refreshAfterCommit();
+      };
+    }
+    const presets = {
+      plein: { x: 0, y: 0, scale: 1, rotation: 0 },
+      gauche: { x: -0.34, y: 0, scale: 1.12, rotation: 0 },
+      droite: { x: 0.34, y: 0, scale: 1.12, rotation: 0 }
+    };
+    $$('#ed-props [data-tr-preset]').forEach((button) => {
+      button.onclick = () => {
+        const preset = presets[button.dataset.trPreset];
+        if (!preset) return;
+        const ok = commit(() => M.updateClip(S.project, clip.id, { transform: preset }));
+        if (ok) refreshAfterCommit();
+      };
+    });
   }
 
   function bindGrade(clip) {
@@ -1800,6 +2088,16 @@
     $('#ed-play').onclick = () => { if (S.playing) pause(); else play(); };
     $('#ed-split-btn').onclick = splitAtPlayhead;
     $('#ed-delete-btn').onclick = () => deleteSelected(false);
+    const search = $('#ed-media-search');
+    if (search) {
+      search.value = S.filter;
+      search.oninput = () => { S.filter = search.value; renderMedia(); };
+    }
+    const scopes = $('#ed-scopes-toggle');
+    if (scopes) {
+      scopes.classList.toggle('ed-active', S.scopesOpen);
+      scopes.onclick = toggleScopes;
+    }
     const snap = $('#ed-snap');
     snap.checked = S.snap;
     snap.onchange = () => { S.snap = snap.checked; };
@@ -1934,6 +2232,11 @@
     S.project = null;
     S.selectedClipId = null;
     S.playhead = 0;
+    S.filter = '';
+    S.scopesOpen = false;
+    S.scopeLast = 0;
+    S.scopeSource = null;
+    S.scopePlots = {};
     S.history.reset();
     S.container = null;
     S.dirty = false;
@@ -1956,6 +2259,6 @@
       openProjectPicker: () => { const input = $('#ed-project-file'); if (input) input.click(); },
       exportProjectJSON
     },
-    _debug: { state: S, M }
+    _debug: { state: S, M, importFiles }
   };
 })();

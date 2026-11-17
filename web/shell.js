@@ -100,7 +100,7 @@
     }
     if (action === 'aiStatus') { showAiStatus(); return; }
     if (action === 'about') {
-      toast('Révélation AI Studio 0.10.0 · montage multipiste, étalonnage canvas, atelier photo à calques, habillages Resolve/Photoshop/After Effects/Blender/Fairlight et passerelles vérifiables.');
+      toast('Révélation AI Studio 0.11.0 · transformation et fondus de clips, formes d’onde, scopes Resolve, recherche médias, texte photo éditable et passerelles vérifiables.');
       return;
     }
     if (action === 'newPhoto') {

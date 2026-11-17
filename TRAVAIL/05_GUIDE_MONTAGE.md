@@ -14,7 +14,7 @@ Au premier lancement, créer un mot de passe de **12 caractères minimum**. Il p
 2. Cliquer **＋ Importer** dans le panneau Médias.
 3. Choisir un ou plusieurs fichiers vidéo, audio ou image.
 
-Les fichiers sont stockés dans le coffre chiffré du navigateur. La vignette et la durée apparaissent. Un média reste disponible après rechargement et reconnexion.
+Les fichiers sont stockés dans le coffre chiffré du navigateur. La vignette et la durée apparaissent. Un média reste disponible après rechargement et reconnexion. Le champ de recherche au-dessus du pool filtre par nom ; le compteur indique le nombre de résultats et un message explicite remplace la liste quand rien ne correspond.
 
 Formats acceptés : ceux que le navigateur/Electron sait décoder (MP4/H.264, WebM, MP3, WAV, PNG, JPEG, etc.). Un format non décodable est signalé par une vignette ou une lecture absente.
 
@@ -29,7 +29,7 @@ Pistes par défaut, de haut en bas : **V2, V1, A1, A2**. Une vidéo sur V2 masqu
 
 ## 4. Sélectionner et éditer un clip
 
-Cliquer un clip : l'inspecteur affiche son nom, sa piste, son début, sa durée, son point d'entrée, son opacité, son volume et une case muet.
+Cliquer un clip : l'inspecteur affiche son nom, sa piste, son début, sa durée, son point d'entrée, son opacité, son volume, une case muet, ses **fondus entrée/sortie**, sa **transformation** (X/Y, échelle, rotation) et son étalonnage.
 
 | Action | Geste |
 | --- | --- |
@@ -129,7 +129,36 @@ Les menus appellent les mêmes fonctions que les boutons de l'éditeur : **Nouve
 
 Valeurs positives : exposition et contraste éclaircissent/renforcent, saturation intensifie les couleurs, température réchauffe (sépia). Valeurs négatives : assombrissent, adoucissent, désaturent, refroidissent (rotation de teinte).
 
-## 12. Atelier photo à calques
+## 12. Transformation, fondus, formes d'onde et scopes
+
+### 12.1 Transformation
+
+1. Sélectionner un clip vidéo ou image.
+2. Dans l'inspecteur, section **Transformation**, régler **Position X**, **Position Y**, **Échelle** (5–300 %) et **Rotation** (−180…180°).
+3. Le moniteur se met à jour en direct ; les boutons **Plein / Gauche / Droite** appliquent un cadrage complet.
+4. Relâcher le curseur crée une entrée d'historique unique ; `⌘Z` revient à l'état précédent.
+
+### 12.2 Fondus
+
+- **Fondu entrée** et **Fondu sortie** sont des durées en secondes, bornées à la durée du clip.
+- Le coin du clip se dessine sur la timeline.
+- Le fondu agit sur l'**opacité image** et sur le **gain audio** : un clip audio baisse réellement au début et à la fin.
+- Après une coupe, chaque moitié conserve le fondu de son bord.
+
+### 12.3 Formes d'onde
+
+Les clips audio affichent une forme d'onde calculée depuis les pics du média décodé. Elle suit la portion réellement utilisée (`Entrée source … Entrée + Durée`). Elle est informative : elle ne modifie ni le son ni le niveau.
+
+### 12.4 Scopes
+
+Le bouton **Scopes** du moniteur affiche ou masque deux contrôles calculés depuis l'image affichée :
+
+- **Waveform luma** : répartition de la luminance ;
+- **Vectorscope Cb/Cr** : saturation et teinte, avec cibles R/M/B/C/G/Y.
+
+Le rendu est rafraîchi au plus toutes les 120 ms. Les scopes sont un contrôle d'aperçu, pas un moteur colorimétrique : ils n'altèrent pas l'export.
+
+## 13. Atelier photo à calques
 
 1. Ouvrir l'onglet **Photo**. Une composition de bienvenue 1920 × 1080 est fournie.
 2. Choisir un outil dans le rail : déplacement (`V`), pinceau (`B`), gomme (`E`), rectangle, ellipse, texte, remplissage, pipette.
@@ -140,9 +169,9 @@ Valeurs positives : exposition et contraste éclaircissent/renforcent, saturatio
 7. La composition est sauvegardée automatiquement dans le navigateur ; **Enregistrer** force la sauvegarde, **Ouvrir** recharge la dernière composition.
 8. **Exporter PNG** télécharge le rendu composé réel (tous les calques visibles, opacité et fusion comprises).
 
-Les calques texte sont créés par un clic dans l'image ; le texte est saisi dans l'invite du navigateur. **Importer image** ajoute un fichier comme nouveau calque.
+Les calques texte sont créés par un clic dans l'image. Le panneau de propriétés permet de modifier le **contenu**, la **taille**, la **police** et la **couleur** ; le canvas se met à jour en direct. Un double-clic sur le canvas place le curseur dans le champ texte du calque actif. **Importer image** ajoute un fichier comme nouveau calque. Les modifications de texte sont annulables et rétablissables.
 
-## 13. Comprendre l'état IA
+## 14. Comprendre l'état IA
 
 Le bandeau et la page **IA & quotas** affichent l'état réel, pas un décor :
 

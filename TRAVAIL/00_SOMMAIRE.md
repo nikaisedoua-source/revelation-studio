@@ -1,6 +1,6 @@
 # Révélation Studio — dossier de travail
 
-Version documentée : **0.10.0**
+Version documentée : **0.11.0**
 Date de cette passe : **2026-11-17**
 Dossier de code : `REVELATION_STUDIO/`
 
@@ -18,15 +18,18 @@ Ce dossier explique ce qui a été construit, pourquoi, comment le vérifier et 
 | [06_TESTS_PREUVES.md](06_TESTS_PREUVES.md) | commandes exécutées et résultats observés |
 | [07_LIMITES_ET_SUITE.md](07_LIMITES_ET_SUITE.md) | limites honnêtes, risques, prochaines étapes |
 | [08_IA_ET_COMPTES.md](08_IA_ET_COMPTES.md) | audit daté des moteurs IA réellement actifs et des clés présentes |
+| [09_COMPARAISON_RESOLVE_PHOTOSHOP.md](09_COMPARAISON_RESOLVE_PHOTOSHOP.md) | comparaison honnête avec Resolve, Photoshop, Premiere, After Effects et Fairlight |
 
 ## Ce que fait l'application
 
 - **Habillage studio professionnel** : barre de menus, onglets d'espaces de travail (Média, Montage, Photo, Étalonnage, VFX, Audio, IA Média, Livraison), palette de commandes `⌘K`, barre d'état et raccourcis `Alt+1…8`, dans l'esprit d'un DaVinci Resolve / Photoshop.
 - **Habillages par logiciel (0.10.0)** : 12 espaces raccordés à leur logiciel — Resolve (montage, couleur, livraison), Fairlight (mixage), Photoshop (photo, texte, storyboard), After Effects (motion, VFX, graphiques), Blender (3D), Premiere Pro (atelier film). Chaque espace porte une barre d'identité avec l'état réel du pont (`Connecté`, `Installé · pont inactif`, `Non détecté`, `Compagnon Mac requis`), la version détectée et les actions Tester / Ouvrir / Dossier / Hub.
 - **Hub de connexions réel** : la page Connexions remplace l'ancien tableau par cinq cartes logicielles alimentées par `stats.apps` ; chaque action appelle une route réelle (`/activate`, `/open`, `/folder`). Aucun pont n'est affiché connecté sans heartbeat récent.
-- **Éditeur timeline réel** : médias importés, pistes V2/V1/A1/A2, déplacement, coupe, découpe, suppression avec ripple, aimantation, zoom, annuler/rétablir, lecture temps réel, export vidéo MP4/WebM.
-- **Étalonnage réel** : exposition, contraste, saturation et température par clip, appliqués au moniteur **et** à l'export, avec préréglages Neutre/Ambre/Acier/Contraste.
-- **Atelier photo à calques** : pinceau, gomme, formes, texte, remplissage, pipette, déplacement, opacité, modes de fusion, visibilité, réordonnancement, duplication, historique, persistance IndexedDB et export PNG réel.
+- **Éditeur timeline réel** : médias importés, **recherche dans le pool**, pistes V2/V1/A1/A2, déplacement, coupe, découpe, suppression avec ripple, aimantation, zoom, annuler/rétablir, lecture temps réel, export vidéo MP4/WebM.
+- **Transformation et fondus (0.11.0)** : position X/Y, échelle, rotation par clip avec préréglages ; fondus entrée/sortie visibles sur la timeline et appliqués à l'image comme au gain audio.
+- **Audio outillé (0.11.0)** : formes d'onde dessinées depuis les pics décodés, volume, mute et fondus par clip.
+- **Étalonnage et scopes réels (0.11.0)** : exposition, contraste, saturation et température par clip, appliqués au moniteur **et** à l'export, avec préréglages Neutre/Ambre/Acier/Contraste, **waveform luma** et **vectorscope Cb/Cr** superposés au moniteur.
+- **Atelier photo à calques** : pinceau, gomme, formes, texte, remplissage, pipette, déplacement, opacité, modes de fusion, visibilité, réordonnancement, duplication, historique, persistance IndexedDB et export PNG réel. **Le texte est éditable après création** (contenu, taille, police, couleur, aperçu direct, undo du bitmap).
 - **Studio de production** : 20 pages fonctionnelles (atelier film, scénario/découpage, storyboard, images et vidéo IA, motion, graphiques, 3D, Photoshop, étalonnage, effets, audio, fournisseurs, modèles locaux, connexions, contrôle, compte).
 - **Trois exécutions avec le même socle web** :
   1. site statique / PWA installable (`web-online/dist/`) ;
@@ -44,7 +47,7 @@ npm install                 # Electron et electron-builder
 
 npm run web:build           # construit web-online/dist/
 npm run desktop             # construit puis lance l'application Electron
-npm test                    # 32 tests Node
+npm test                    # 35 tests Node
 npm run verify              # syntaxe + tests + build
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 29 tests Python
 npm run dist:mac            # .dmg et .zip macOS
