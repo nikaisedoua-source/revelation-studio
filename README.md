@@ -1,6 +1,6 @@
 # Révélation AI Studio
 
-Version 0.11.0 — scénario, storyboard, motion design, **montage vidéo multipiste**, **atelier photo à calques**, **étalonnage et scopes réels** et **espaces raccordés aux logiciels de création**.
+Version 0.11.1 — scénario, storyboard, motion design, **montage vidéo multipiste**, **atelier photo à calques**, **étalonnage et scopes réels** et **espaces raccordés aux logiciels de création**. Cette passe corrige l'import audio/vidéo dont la durée arrondie dépassait la source d'une image.
 
 - **Studio professionnel** : barre de menus, onglets d'espaces (Média, Montage, Photo, Étalonnage, VFX, Audio, IA Média, Livraison), palette `⌘K`, barre d'état et raccourcis `Alt+1…8`.
 - **Habillages par logiciel** : chaque espace reprend l'identité visuelle du logiciel auquel il est raccordé — Resolve (montage, couleur, livraison), Fairlight (audio), Photoshop (photo, texte, storyboard), After Effects (motion, VFX, graphiques), Blender (3D) et Premiere Pro (atelier film) — avec une barre d'identité réelle (état du pont, version, Tester / Ouvrir / Dossier / Hub).
@@ -98,7 +98,7 @@ Le Studio Mac est individuel et reste sur loopback. L’édition web est un coff
 - [État opérationnel daté](docs/ETAT_OPERATIONNEL.md)
 
 ```sh
-npm test                 # 35 tests Node
+npm test                 # 36 tests Node
 npm run verify           # syntaxe + tests + build
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 29 tests Python
 ```

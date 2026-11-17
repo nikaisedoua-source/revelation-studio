@@ -257,3 +257,22 @@ test('split and trim keep fades attached to the correct edges', () => {
   assert.equal(right.fadeOut, 1, 'fadeOut is clamped to the shortened clip');
   assert.equal(left.fadeIn, 2);
 });
+
+test('fitDuration never exceeds the source media after frame quantization', () => {
+  const p = project();
+  const rawDurations = [2.086893, 2.96, 1.959, 2.796, 29.999];
+  for (const raw of rawDurations) {
+    const fitted = M.fitDuration(p, raw);
+    assert.ok(fitted <= raw, `${fitted} must not exceed ${raw}`);
+    assert.ok(fitted >= M.minDuration(p));
+  }
+  assert.equal(M.fitDuration(p, 5), 5);
+  assert.equal(M.fitDuration(p, 2), 2);
+
+  const audio = M.addClip(p, {
+    trackId: 'A1', kind: 'audio', name: 'Voix', mediaName: 'voix.wav', mediaId: 'a1',
+    start: 0.8, duration: M.fitDuration(p, 2.086893), in: 0, mediaDuration: 2.086893
+  });
+  assert.ok(Math.abs(audio.duration - 2.0666666666666664) < 1e-9);
+  assert.ok(audio.in + audio.duration <= 2.086893);
+});

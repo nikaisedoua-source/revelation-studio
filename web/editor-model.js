@@ -42,6 +42,12 @@
     return Math.round(seconds * fps) / fps;
   }
 
+  function fitDuration(project, seconds) {
+    const frame = minDuration(project);
+    const quantized = quantize(project, seconds);
+    return quantized > seconds + EPS ? Math.max(frame, quantized - frame) : quantized;
+  }
+
   function clamp(value, low, high) {
     return Math.min(high, Math.max(low, value));
   }
@@ -608,6 +614,7 @@
     clone,
     clamp,
     quantize,
+    fitDuration,
     minDuration,
     normalizeTransform,
     fadeFactor,

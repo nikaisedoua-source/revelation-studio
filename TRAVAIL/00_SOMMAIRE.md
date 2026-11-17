@@ -1,6 +1,6 @@
 # Révélation Studio — dossier de travail
 
-Version documentée : **0.11.0**
+Version documentée : **0.11.1**
 Date de cette passe : **2026-11-17**
 Dossier de code : `REVELATION_STUDIO/`
 
@@ -28,6 +28,7 @@ Ce dossier explique ce qui a été construit, pourquoi, comment le vérifier et 
 - **Éditeur timeline réel** : médias importés, **recherche dans le pool**, pistes V2/V1/A1/A2, déplacement, coupe, découpe, suppression avec ripple, aimantation, zoom, annuler/rétablir, lecture temps réel, export vidéo MP4/WebM.
 - **Transformation et fondus (0.11.0)** : position X/Y, échelle, rotation par clip avec préréglages ; fondus entrée/sortie visibles sur la timeline et appliqués à l'image comme au gain audio.
 - **Audio outillé (0.11.0)** : formes d'onde dessinées depuis les pics décodés, volume, mute et fondus par clip.
+- **Correctif d'import (0.11.1)** : la durée d'un média audio/vidéo est désormais arrondie **vers le bas** quand l'arrondi frame dépasserait la source ; un fichier de 2,086893 s devient 2,066667 s et s'insère sans être refusé. Un projet de démonstration de 30 s (6 plans, 6 voix, musique, 14 clips) a servi de test réel et a été exporté en MP4 1920 × 1080. Voir [06_TESTS_PREUVES.md](06_TESTS_PREUVES.md#9-passe-0111--correctif-dimport-et-projet-30-s).
 - **Étalonnage et scopes réels (0.11.0)** : exposition, contraste, saturation et température par clip, appliqués au moniteur **et** à l'export, avec préréglages Neutre/Ambre/Acier/Contraste, **waveform luma** et **vectorscope Cb/Cr** superposés au moniteur.
 - **Atelier photo à calques** : pinceau, gomme, formes, texte, remplissage, pipette, déplacement, opacité, modes de fusion, visibilité, réordonnancement, duplication, historique, persistance IndexedDB et export PNG réel. **Le texte est éditable après création** (contenu, taille, police, couleur, aperçu direct, undo du bitmap).
 - **Studio de production** : 20 pages fonctionnelles (atelier film, scénario/découpage, storyboard, images et vidéo IA, motion, graphiques, 3D, Photoshop, étalonnage, effets, audio, fournisseurs, modèles locaux, connexions, contrôle, compte).
@@ -47,7 +48,7 @@ npm install                 # Electron et electron-builder
 
 npm run web:build           # construit web-online/dist/
 npm run desktop             # construit puis lance l'application Electron
-npm test                    # 35 tests Node
+npm test                    # 36 tests Node
 npm run verify              # syntaxe + tests + build
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 29 tests Python
 npm run dist:mac            # .dmg et .zip macOS

@@ -1526,7 +1526,7 @@
 
   function defaultDuration(entry) {
     if (entry.kind === 'image') return 5;
-    return entry.duration > 0 ? entry.duration : 5;
+    return M.fitDuration(S.project, entry.duration > 0 ? entry.duration : 5);
   }
 
   function addMediaAtPlayhead(mediaId) {

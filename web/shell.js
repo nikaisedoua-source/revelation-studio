@@ -100,7 +100,7 @@
     }
     if (action === 'aiStatus') { showAiStatus(); return; }
     if (action === 'about') {
-      toast('Révélation AI Studio 0.11.0 · transformation et fondus de clips, formes d’onde, scopes Resolve, recherche médias, texte photo éditable et passerelles vérifiables.');
+      toast('Révélation AI Studio 0.11.1 · transformation et fondus de clips, formes d’onde, scopes Resolve, recherche médias, texte photo éditable, passerelles vérifiables et import audio corrigé.');
       return;
     }
     if (action === 'newPhoto') {

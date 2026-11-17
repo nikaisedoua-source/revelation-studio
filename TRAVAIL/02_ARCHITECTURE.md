@@ -163,7 +163,7 @@ Les habillages sont **cosmétiques** ; les états et les actions sont **réels**
 
 ## 9. Distribution
 
-- PWA : `manifest.webmanifest`, icônes 180/192/512, service worker versionné `revelation-web-0.11.0`.
+- PWA : `manifest.webmanifest`, icônes 180/192/512, service worker versionné `revelation-web-0.11.1`.
 - Electron : `electron-builder` produit `.dmg` + `.zip` macOS arm64, et configure NSIS + portable Windows ainsi qu'AppImage Linux.
 - Le nom du bundle macOS est volontairement **ASCII** (`Revelation Studio.app`) ; l'interface et le titre restent « Révélation ». Un bundle accentué provoquait un crash au démarrage sur la machine de test.
 

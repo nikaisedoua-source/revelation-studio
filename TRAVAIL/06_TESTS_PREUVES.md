@@ -465,3 +465,81 @@ Service statique local sur `127.0.0.1:8860`, build `web-online/dist/` servi tel 
 | Photo | 3 calques restaurés, 8 outils, champs `#ph-text-value`, `#ph-text-size`, `#ph-text-font`, `#ph-text-color` présents |
 
 Aucun de ces contrôles n'est décoratif : chacun est relié au modèle ou au rendu décrit dans [02_ARCHITECTURE.md](02_ARCHITECTURE.md).
+
+## 9. Passe 0.11.1 — correctif d'import et projet 30 s
+
+### 9.1 Test de régression
+
+```sh
+npm test
+```
+
+```text
+✔ fitDuration never exceeds the source media after frame quantization
+ℹ tests 36
+ℹ pass 36
+ℹ fail 0
+```
+
+Le test rejoue les durées réelles qui ont échoué à l'import :
+
+| Durée source | Ancien comportement | `fitDuration` |
+| --- | --- | --- |
+| 2,086893 s | 2,1 s → refusé | 2,066667 s |
+| 2,96 s | 2,966667 s → refusé | 2,933333 s |
+| 1,959 s | 1,966667 s → refusé | 1,933333 s |
+| 2,796 s | 2,8 s → refusé | 2,766667 s |
+| 29,999 s | 30,0 s → refusé | 29,966667 s |
+
+Contrainte vérifiée : `in + duration ≤ mediaDuration` après normalisation.
+
+### 9.2 Tests, syntaxe et build
+
+```sh
+npm run verify
+```
+
+```text
+tests 36 · pass 36 · fail 0
+{"files": 26, "bytes": 491201}
+```
+
+Tests Python :
+
+```text
+Ran 29 tests in 0.064s
+OK
+```
+
+### 9.3 Export réel du projet 30 s
+
+Le projet **Révélation — 30 secondes** a été monté puis exporté depuis l'onglet Montage, avec un récepteur HTTP local pour récupérer les fichiers téléchargés.
+
+| Livrable | Taille | Vérification |
+| --- | --- | --- |
+| `Revelation-30-secondes.montage.json` | 13 590 octets | 14 clips, 4 pistes, 14 médias |
+| `Revelation-30-secondes.mp4` | 17 694 486 octets | `mdls` : H.264 + AAC, 1920 × 1080, 30,095 s |
+
+Répartition des clips dans le JSON exporté :
+
+```text
+V2 : overlay.png@0 +30
+V1 : 6 plans à 0/5/10/15/20/25, 5 s chacun
+A1 : 6 voix à 0,8/5,8/10,8/15,8/20,8/25,4
+A2 : musique.wav@0 +30
+```
+
+Les fichiers sont conservés hors dépôt dans `../Projet_30s_Revelation/`.
+
+### 9.4 Paquet macOS 0.11.1
+
+```sh
+npm run dist:mac
+```
+
+| Fichier | Taille | SHA-256 |
+| --- | --- | --- |
+| `release/Revelation-Studio-0.11.1-arm64.dmg` | 120 832 592 octets | `544bc53d3c69a9b4d8ceacc30c1cc8a3b160ad57f29c7504bc4418235d3f4145` |
+| `release/Revelation-Studio-0.11.1-arm64.zip` | 117 321 695 octets | `64cefca62edaf53bc1da82a73a9c8177c806bcd75d810335f364f8f7e749bd47` |
+
+Le binaire packagé a été lancé avec `REVELATION_PORT=41912` : **HTTP 200** et `version.json` a renvoyé `0.11.1`. Le processus a été arrêté ensuite. Le paquet reste non signé/non notarié.
