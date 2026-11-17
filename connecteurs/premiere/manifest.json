@@ -1,0 +1,38 @@
+{
+  "manifestVersion": 5,
+  "id": "fr.revelationstudio.local.premiere",
+  "name": "Révélation AI Studio",
+  "version": "0.2.0",
+  "main": "index.html",
+  "host": {
+    "app": "premierepro",
+    "minVersion": "25.6.0"
+  },
+  "requiredPermissions": {
+    "localFileSystem": "request",
+    "launchProcess": {
+      "schemes": [
+        "revelationstudio",
+        "http"
+      ],
+      "extensions": []
+    }
+  },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "revelationPremiere",
+      "label": {
+        "default": "Révélation AI Studio"
+      },
+      "minimumSize": {
+        "width": 300,
+        "height": 360
+      },
+      "preferredDockedSize": {
+        "width": 340,
+        "height": 500
+      }
+    }
+  ]
+}

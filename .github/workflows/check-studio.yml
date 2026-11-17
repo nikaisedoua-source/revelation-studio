@@ -1,0 +1,30 @@
+name: Vérifier le Studio et la version web
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+      - run: python -m compileall -q app
+      - run: node --check web/studio.js && node --check web/film.js && node --check web/integrations.js && node --check web/editor-model.js && node --check web/editor.js && node --check web-online/cloud-runtime.js && node --check web-online/browser-engine.js && node --check web-online/browser-extras.js && node --check web-online/sw.js
+      - run: node --test tests/*_test.cjs
+      - run: python scripts/build_web.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: revelation-studio-web
+          path: web-online/dist/
+          retention-days: 14

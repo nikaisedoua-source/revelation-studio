@@ -1,0 +1,14 @@
+const ps=require('photoshop'),fs=require('uxp').storage.localFileSystem;
+let folder,inbox,pending=[];
+const status=t=>document.getElementById('status').textContent=t;
+async function write(name,data){const f=await folder.createFile(name,{overwrite:true});await f.write(JSON.stringify(data));}
+async function refresh(){if(!folder)return;try{const items=await inbox.getEntries(),done=await folder.getEntries();pending=[];for(const f of items){if(!f.name.endsWith('.json')||done.some(x=>x.name==='result_'+f.name))continue;const j=JSON.parse(await f.read());if(j.target==='photoshop'&&j.kind==='photoshop')pending.push(j);}const list=document.getElementById('jobs');list.innerHTML='';for(const j of pending){const o=document.createElement('option');o.value=j.id;o.textContent=j.settings.title;list.appendChild(o);}await write('heartbeat.json',{app:'photoshop',connected:true});status(pending.length+' demande(s) en attente.');}catch(e){status(String(e));}}
+document.getElementById('choose').onclick=async()=>{try{const f=await fs.getFolder();if(!f)return;inbox=await f.getEntry('inbox');folder=f;await refresh();}catch(e){status('Choisir le dossier photoshop contenant inbox. '+e);}};
+document.getElementById('apply').onclick=async()=>{const j=pending.find(j=>j.id===document.getElementById('jobs').value);if(!j)return;try{await ps.core.executeAsModal(async()=>{
+ const s=j.settings;
+ const doc=await ps.app.documents.add({width:1920,height:1080,resolution:72,name:'REVELATION - '+s.title,mode:ps.constants.NewDocumentMode.RGB,fill:ps.constants.DocumentFill.TRANSPARENT});
+ const layer=await doc.createTextLayer({name:'TEXTE MODIFIABLE',contents:s.title,fontSize:150});
+ const rgb=[1,3,5].map(i=>parseInt(s.color.slice(i,i+2),16));const color=new ps.app.SolidColor();color.rgb.red=rgb[0];color.rgb.green=rgb[1];color.rgb.blue=rgb[2];layer.textItem.characterStyle.color=color;layer.textItem.characterStyle.fontPostScriptName=s.style==='cinema'?'Baskerville':'Arial-BoldMT';layer.textItem.textClickPoint={x:160,y:540};
+ await ps.action.batchPlay([{_obj:'set',_target:[{_ref:'property',_property:'layerEffects'},{_ref:'layer',_enum:'ordinal',_value:'targetEnum'}],to:{_obj:'layerEffects',scale:{_unit:'percentUnit',_value:100},dropShadow:{_obj:'dropShadow',enabled:true,present:true,showInDialog:true,mode:{_enum:'blendMode',_value:'multiply'},color:{_obj:'RGBColor',red:0,grain:0,blue:0},opacity:{_unit:'percentUnit',_value:32},distance:{_unit:'pixelsUnit',_value:6},blur:{_unit:'pixelsUnit',_value:12}}},_options:{dialogOptions:'dontDisplay'}}],{});
+ },{commandName:'Révélation : créer un texte éditable'});await write('result_'+j.id+'.json',{id:j.id,success:true,app:'photoshop'});await refresh();status('Texte éditable créé. Enregistrer le PSD dans Photoshop.');}catch(e){await write('result_'+j.id+'.json',{id:j.id,success:false,error:String(e)});status(String(e));}};
+setInterval(refresh,8000);

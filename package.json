@@ -1,0 +1,65 @@
+{
+  "name": "revelation-studio",
+  "version": "0.8.0",
+  "private": true,
+  "description": "Studio de préproduction et montage vidéo local, web, macOS et Windows",
+  "main": "desktop/main.cjs",
+  "author": "Révélation Studio",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "web:build": "node scripts/build-web.cjs",
+    "desktop": "npm run web:build && electron .",
+    "dist": "npm run web:build && electron-builder",
+    "dist:mac": "npm run web:build && electron-builder --mac",
+    "dist:win": "npm run web:build && electron-builder --win",
+    "test": "node --test tests/*_test.cjs",
+    "verify": "node --check web/editor-model.js && node --check web/editor.js && node --check web/studio.js && node --check web-online/cloud-runtime.js && node --check web-online/browser-engine.js && node --check web-online/sw.js && node --test tests/*_test.cjs && npm run web:build"
+  },
+  "devDependencies": {
+    "electron": "^45.3.4",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "studio.revelation.app",
+    "productName": "Revelation Studio",
+    "artifactName": "Revelation-Studio-${version}-${arch}.${ext}",
+    "asar": true,
+    "directories": {
+      "buildResources": "desktop/build",
+      "output": "release"
+    },
+    "files": [
+      "desktop/main.cjs",
+      "desktop/preload.cjs",
+      "desktop/static-server.cjs",
+      "desktop/provider-proxy.cjs",
+      "web-online/dist/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "icon": "desktop/build/icon.icns",
+      "target": ["dmg", "zip"],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "win": {
+      "icon": "desktop/build/icon.png",
+      "target": ["nsis", "portable"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Revelation-Studio-Setup-${version}.${ext}"
+    },
+    "linux": {
+      "icon": "desktop/build/icon.png",
+      "target": ["AppImage"],
+      "category": "AudioVideo"
+    }
+  }
+}
