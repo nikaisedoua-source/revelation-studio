@@ -19,6 +19,12 @@ La version web privée est hébergée séparément du dépôt de code. Aucun pro
 
 **Documentation de construction et de vérification : [TRAVAIL/00_SOMMAIRE.md](TRAVAIL/00_SOMMAIRE.md).**
 
+## Télécharger
+
+Dernière version macOS (Apple Silicon) : **[Release v0.12.0](https://github.com/nikaisedoua-source/revelation-studio/releases/latest)** — DMG et ZIP.
+
+Le paquet n'est ni signé ni notarié : au premier lancement, utiliser clic droit → **Ouvrir**, ou autoriser l'application dans Réglages Système → Confidentialité et sécurité. Les empreintes SHA-256 sont publiées dans les notes de version.
+
 ## Démarrer sur Mac
 
 L’installation existante de Révélation AI Studio reste disponible. Pour une nouvelle installation, créer un environnement Python puis installer `requirements.txt` ; les moteurs MLX et leurs modèles sont optionnels et nécessitent leurs adaptateurs propres.
