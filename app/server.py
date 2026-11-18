@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from . import registry, outputs, cinema, catalog, project_data, providers, quality, motion_script, bridges, workspace, film_workflow, anthropic_client, generic_client, cloud_client, config, google_oauth, photoshop_capture, resource_curator
+from . import registry, outputs, cinema, catalog, project_data, providers, quality, motion_script, bridges, workspace, film_workflow, anthropic_client, generic_client, cloud_client, config, google_oauth, photoshop_capture, resource_curator, system_tts
 import urllib.parse
 
 ROOT=config.ROOT;DATA=config.DATA;DATA.mkdir(parents=True,exist_ok=True)
@@ -379,7 +379,7 @@ def execute(j):
 @app.get('/api/bootstrap')
 def bootstrap(request:Request):
  rec=_auth_record();auth=_authorized(request)
- return {'token':TOKEN if auth else None,'version':'0.11.1','name':'Révélation AI Studio','output_root':str(config.production_root()),'charter':cinema.CHARTER,'sources':cinema.SOURCES,'auth':{'configured':bool(rec),'authenticated':auth,'requires_setup':not bool(rec),'profile':({'identity':rec.get('identity','')} if rec and auth else None),'google_configured':all(google_oauth.client()),'google_linked':bool(rec and rec.get('google_sub'))},'catalog_date':catalog.CATALOG_DATE,'catalog_version':catalog.CATALOG_VERSION}
+ return {'token':TOKEN if auth else None,'version':'0.12.0','name':'Révélation AI Studio','output_root':str(config.production_root()),'charter':cinema.CHARTER,'sources':cinema.SOURCES,'auth':{'configured':bool(rec),'authenticated':auth,'requires_setup':not bool(rec),'profile':({'identity':rec.get('identity','')} if rec and auth else None),'google_configured':all(google_oauth.client()),'google_linked':bool(rec and rec.get('google_sub'))},'catalog_date':catalog.CATALOG_DATE,'catalog_version':catalog.CATALOG_VERSION}
 
 @app.get('/api/status')
 def status():
@@ -413,6 +413,20 @@ class MotionPlanSpec(BaseModel):
 def plan_motion(s:MotionPlanSpec):
  try:return motion_script.parse_script(s.script,s.seconds,s.fps)
  except ValueError as e:raise HTTPException(422,str(e))
+
+class SystemTtsSpec(BaseModel):
+ text:str=Field(min_length=1,max_length=900)
+ voice:str=Field(default='',max_length=120)
+ rate:int=Field(default=175,ge=90,le=320)
+
+@app.get('/api/tts/system/voices')
+def tts_voices():return system_tts.status()
+
+@app.post('/api/tts/system')
+def tts_render(s:SystemTtsSpec):
+ try:return system_tts.render({'text':s.text,'voice':s.voice,'rate':s.rate})
+ except ValueError as e:raise HTTPException(422,str(e))
+ except RuntimeError as e:raise HTTPException(503,str(e))
 
 @app.get('/api/workspace')
 def get_workspace():return workspace.ensure()

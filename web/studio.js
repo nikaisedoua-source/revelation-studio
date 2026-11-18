@@ -1,5 +1,6 @@
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let boot,stats,allJobs=[],page='workspace',uploaded=[],busy=false,activeJob=null,pollStarted=false;
+window.StudioAuthToken=()=>boot?.token||'';
 let motionMode='script',motionPlan=null,motionPlanKey='',motionPreparing=false;
 const motionExample='0-6 | KACOU 180 | LE TEMPS DU RÉTABLISSEMENT DE L’ÉGLISE SELON ACTES 3 :21 | fondu\n6-13 | KACOU 181 | HAR MEGUIDDO | montee\n13-21 | KACOU 182 | LES DEUX COLOMBES DE LA VISION DE 1993 | zoom\n21-30 | KACOU 183 | BIENTÔT DISPONIBLE | fondu';
 let motionDraft={script:motionExample,title:'KACOU 183',subtitle:'BIENTÔT DISPONIBLE',style:'cinema',color:'#dfba75',seconds:30,fps:25};

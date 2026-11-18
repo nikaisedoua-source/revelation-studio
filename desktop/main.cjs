@@ -3,6 +3,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell, Menu, session } = require('e
 const path = require('node:path');
 const { createStaticServer } = require('./static-server.cjs');
 const { proxyRequest } = require('./provider-proxy.cjs');
+const systemTts = require('./system-tts.cjs');
 
 const PORT = Number(process.env.REVELATION_PORT || 41888);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
@@ -108,6 +109,20 @@ app.whenReady().then(async () => {
     if (!/^https:\/\//i.test(value)) return false;
     await shell.openExternal(value);
     return true;
+  });
+  ipcMain.handle('studio:tts-voices', () => {
+    try {
+      return systemTts.status();
+    } catch (error) {
+      return { available: false, backend: '', voices: [], default: '', reason: String(error && error.message || error) };
+    }
+  });
+  ipcMain.handle('studio:tts-render', async (_event, payload) => {
+    try {
+      return systemTts.render(payload || {});
+    } catch (error) {
+      return { error: String(error && error.message || error) };
+    }
   });
   secureWebContents();
   buildMenu();

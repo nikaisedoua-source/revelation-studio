@@ -107,3 +107,12 @@
 ## 5. Règle pour la suite
 
 Toute nouvelle fonction doit suivre le même critère : interface réelle, persistance, résultat observable, test dans un vrai navigateur ou un vrai processus. Une fonction seulement présente dans le code mais non exercée doit être marquée « non vérifiée », pas « terminée ».
+
+## 6. Limites de l’assistant projet (0.12.0)
+
+- Les six plans sont **procéduraux** : ce sont de vraies images rendues (Canvas 2D), mais ce ne sont pas des prises de vue générées par un modèle vidéo. Aucun modèle cloud n’est appelé sans consentement.
+- La voix dépend des voix installées sur le système. Sans voix, le film est assemblé sans voix et le journal l’explique ; le module ne simule jamais une piste vocale.
+- L’édition web autonome sans pont système n’a pas accès à la synthèse vocale native. Elle rend images, titres et musique, et l’indique dans l’interface.
+- L’aperçu et l’export utilisent MediaRecorder en temps réel. Un master alpha, ProRes ou un rendu plus rapide que temps réel reste du ressort du serveur Mac/FFmpeg.
+- La musique est une composition originale synthétisée ; elle ne remplace pas un habillage sonore professionnel avec échantillons licenciés.
+- Le test d’export automatisé capture le blob produit (hash et en-tête) au lieu d’écrire un fichier via la boîte de dialogue système. L’utilisateur, lui, reçoit le téléchargement normal.

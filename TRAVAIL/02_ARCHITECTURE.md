@@ -210,3 +210,26 @@ Le rendu est limité à un rafraîchissement toutes les 120 ms. Le panneau `.ed-
 ### 10.6 Texte photo
 
 Un calque texte conserve ses propriétés dans `layer.text` (contenu, taille, police, couleur) et son rendu dans le bitmap du calque. `snapshotText()` capture propriétés et pixels ; `commitText()` restaure le bitmap, applique les nouvelles propriétés, redessine et pousse une entrée d'historique `text`. L'undo restaure à la fois le bitmap et les propriétés, ce qui garantit un retour exact même après plusieurs modifications.
+
+### 11. Assistant projet intégré (0.12.0)
+
+Le parcours « fabriquer un film sans sortir du Studio » est réparti en trois couches :
+
+| Couche | Fichier | Rôle |
+| --- | --- | --- |
+| Génération locale | `web/project-assistant.js` | plans procéduraux, titres PNG, musique WAV, plan de montage |
+| Assemblage | `web/editor.js` | assistant modal, import des fichiers, création des clips V1/V2/A1/A2, sauvegarde |
+| Voix système | `desktop/system-tts.cjs`, `app/system_tts.py` | synthèse macOS (`say` + `afconvert`), Windows (SAPI), Linux (`espeak-ng`) |
+
+`project-assistant.js` est un module UMD sans dépendance, utilisable dans le navigateur, Electron et Node. `buildPlan` calcule un total de frames exact (`round(duration × fps)`), répartit le reste sur les premières scènes et expose `shots`, `overlays`, `voices` et la musique. Le rendu des plans utilise un PRNG déterministe (FNV + mulberry32) : le même sujet et le même style produisent le même film, ce qui rend les tests reproductibles. Les couleurs viennent de quatre palettes (`ambre`, `acier`, `nuit`, `neon`).
+
+La musique est entièrement synthétisée (pad, basse, arpège, impacts, risers), écrêtée en douceur et normalisée, puis encodée en PCM 16 bits stéréo RIFF/WAVE à 44,1 ou 48 kHz. Aucun échantillon tiers n'est utilisé.
+
+La voix suit deux canaux réels, jamais simulés :
+
+1. **Electron** : `preload.cjs` expose `ttsVoices` et `ttsRender` ; `main.cjs` appelle `system-tts.cjs`. La voix reste sur le poste, sans clé ni réseau.
+2. **Serveur local** : `GET /api/tts/system/voices` et `POST /api/tts/system` (protégés par `X-Studio-Token`) utilisent `app/system_tts.py`.
+
+L'édition web autonome sans pont système affiche la raison de l'indisponibilité et continue avec les images, titres et musique. Le module ne prétend jamais avoir produit une voix absente.
+
+L'assemblage se fait après import de tous les fichiers : si un import échoue, le projet courant n'est pas remplacé. Les noms incluent un jeton temporel pour éviter tout relink accidentel. Les durées audio passent par `M.fitDuration` afin de ne jamais dépasser la source après quantification.

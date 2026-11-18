@@ -19,6 +19,8 @@
   const STORE_MEDIA = 'media';
   const STORE_META = 'meta';
 
+  const ASST = { busy: false, voices: null, previewTimer: 0 };
+
   const S = {
     mounted: false,
     container: null,
@@ -376,7 +378,8 @@
 
   async function importFiles(files) {
     const list = Array.from(files || []);
-    if (!list.length) return;
+    const created = [];
+    if (!list.length) return created;
     let imported = 0;
     for (const file of list) {
       const kind = mediaKind(file);
@@ -408,6 +411,7 @@
         if (entry.kind === 'audio') ensurePeaks(entry);
         entry.thumb = await makeThumbnail(entry);
         media.thumb = entry.thumb;
+        created.push(entry);
         await dbPut(STORE_MEDIA, {
           id,
           meta: media,
@@ -428,6 +432,7 @@
       renderTransport();
       scheduleSaveMetadata();
     }
+    return created;
   }
 
   function loadImage(url) {
@@ -535,6 +540,7 @@
       <button class="ed-btn" data-ed="save">Enregistrer</button>
       <button class="ed-btn" data-ed="open-project" title="Importer un projet .json">Ouvrir un projet</button>
       <button class="ed-btn" data-ed="export-project" title="Exporter le montage en .json">Projet .json</button>
+      <button class="ed-btn ed-btn-assistant" data-ed="assistant" title="Générer un film complet sans quitter le Studio">Assistant projet</button>
       <button class="ed-btn ed-btn-primary" data-ed="export">Exporter la vidéo</button>
     </div>
   </div>
@@ -601,6 +607,48 @@
   </div>
   <input type="file" id="ed-files" accept="video/*,audio/*,image/*" multiple hidden>
   <input type="file" id="ed-project-file" accept=".json,application/json" hidden>
+  <div class="ed-assistant-overlay" id="ed-assistant-overlay" hidden>
+    <div class="ed-assistant" role="dialog" aria-modal="true" aria-labelledby="ed-asst-title">
+      <header class="ed-asst-head">
+        <div><span class="ed-kicker">FABRIQUER DANS LE STUDIO</span><h2 id="ed-asst-title">Assistant projet</h2></div>
+        <button class="ed-mini" id="ed-asst-close" title="Fermer">×</button>
+      </header>
+      <div class="ed-asst-grid">
+        <div class="ed-asst-controls">
+          <div class="ed-two">
+            <div class="ed-field"><label for="ed-asst-style">Style</label><select id="ed-asst-style">
+              <option value="ambre">Ambre</option><option value="acier">Acier</option><option value="nuit">Nuit</option><option value="neon">Néon</option>
+            </select></div>
+            <div class="ed-field"><label for="ed-asst-duration">Durée (s)</label><input id="ed-asst-duration" type="number" min="12" max="120" step="1" value="30"></div>
+          </div>
+          <div class="ed-field"><label for="ed-asst-subject">Sujet du film</label><input id="ed-asst-subject" maxlength="80" value="Révélation Studio"></div>
+          <div class="ed-field"><label for="ed-asst-signature">Signature finale</label><input id="ed-asst-signature" maxlength="120" value="Fabriqué de bout en bout dans Révélation Studio."></div>
+          <div class="ed-field"><label for="ed-asst-voice">Voix off</label><select id="ed-asst-voice"><option value="">Détection…</option></select></div>
+          <div class="ed-field"><label for="ed-asst-rate">Débit <span id="ed-asst-rate-value">175</span></label><input id="ed-asst-rate" type="range" min="120" max="240" step="5" value="175"></div>
+          <div class="ed-asst-checks">
+            <label class="ed-check"><input type="checkbox" id="ed-asst-images" checked> 6 plans cinématiques</label>
+            <label class="ed-check"><input type="checkbox" id="ed-asst-titles" checked> Titres transparents</label>
+            <label class="ed-check"><input type="checkbox" id="ed-asst-music" checked> Musique originale</label>
+            <label class="ed-check"><input type="checkbox" id="ed-asst-voice-on" checked> Voix off</label>
+          </div>
+          <p class="ed-note" id="ed-asst-voice-note">Détection des voix système…</p>
+        </div>
+        <div class="ed-asst-visual">
+          <canvas id="ed-asst-preview" width="640" height="360"></canvas>
+          <div class="ed-asst-preview-meta"><span id="ed-asst-preview-title">UNE IDÉE</span><span>Plan 1 · 6 plans</span></div>
+          <p class="ed-note">Aperçu réel du plan 1. Les images, les titres et la musique sont rendus localement, puis assemblés sur la timeline avec les voix disponibles.</p>
+        </div>
+      </div>
+      <div class="ed-asst-log" id="ed-asst-log"><div><span>Prêt.</span><small>Le montage actuel sera enregistré puis remplacé.</small></div></div>
+      <footer class="ed-asst-foot">
+        <span class="ed-note" id="ed-asst-summary">6 plans · 6 titres · musique · 6 voix</span>
+        <div>
+          <button class="ed-btn" id="ed-asst-cancel">Fermer</button>
+          <button class="ed-btn ed-btn-primary" id="ed-asst-generate">Générer le projet</button>
+        </div>
+      </footer>
+    </div>
+  </div>
   <div class="ed-toast" id="ed-toast" role="status"></div>
 </div>`;
   }
@@ -2048,6 +2096,359 @@
     });
   }
 
+  /* --------------------------------------------------------------- assistant */
+
+  function assistantModule() {
+    return window.StudioProjectAssistant || null;
+  }
+
+  function canvasToBlob(canvas, type) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Rendu image impossible dans ce navigateur.'));
+      }, type, 0.94);
+    });
+  }
+
+  function assistantYield() {
+    return new Promise((resolve) => setTimeout(resolve, 24));
+  }
+
+  function assistantOptions() {
+    const voiceToggle = $('#ed-asst-voice-on');
+    return {
+      style: $('#ed-asst-style').value,
+      duration: M.clamp(Number($('#ed-asst-duration').value) || 30, 12, 120),
+      width: S.project.width,
+      height: S.project.height,
+      fps: S.project.fps,
+      subject: $('#ed-asst-subject').value.trim(),
+      signature: $('#ed-asst-signature').value.trim(),
+      voice: $('#ed-asst-voice').value,
+      rate: Number($('#ed-asst-rate').value) || 175,
+      images: $('#ed-asst-images').checked,
+      titles: $('#ed-asst-titles').checked,
+      music: $('#ed-asst-music').checked,
+      voiceOn: Boolean(voiceToggle && voiceToggle.checked && !voiceToggle.disabled)
+    };
+  }
+
+  function updateAssistantSummary(options) {
+    const summary = $('#ed-asst-summary');
+    if (!summary) return;
+    const parts = [];
+    if (options.images) parts.push('6 plans');
+    if (options.titles) parts.push('6 titres');
+    if (options.music) parts.push('musique');
+    if (options.voiceOn && ASST.voices && ASST.voices.available) parts.push('6 voix');
+    summary.textContent = `${parts.length ? parts.join(' · ') : 'timeline vide'} · ${Math.round(options.duration)} s`;
+  }
+
+  function updateAssistantPreview() {
+    const A = assistantModule();
+    const canvas = $('#ed-asst-preview');
+    if (!A || !canvas || !S.project) return;
+    const options = assistantOptions();
+    const ctx = canvas.getContext('2d');
+    A.renderShot(ctx, {
+      style: options.style, index: 0, seedText: options.subject,
+      subject: options.subject, seed: A.hashString(`${options.subject}|preview`)
+    });
+    const overlay = document.createElement('canvas');
+    overlay.width = canvas.width;
+    overlay.height = canvas.height;
+    A.renderOverlay(overlay.getContext('2d'), {
+      style: options.style, subject: options.subject, signature: options.signature,
+      shot: { index: 0, number: 1, title: 'UNE IDÉE', subtitle: 'Tout commence par une idée.' },
+      total: 6
+    });
+    ctx.drawImage(overlay, 0, 0);
+    updateAssistantSummary(options);
+  }
+
+  function scheduleAssistantPreview() {
+    clearTimeout(ASST.previewTimer);
+    ASST.previewTimer = setTimeout(updateAssistantPreview, 90);
+  }
+
+  async function refreshAssistantVoices() {
+    const A = assistantModule();
+    const select = $('#ed-asst-voice');
+    const note = $('#ed-asst-voice-note');
+    const toggle = $('#ed-asst-voice-on');
+    if (!A || !select) return;
+    if (!ASST.voices) {
+      select.innerHTML = '<option value="">Détection…</option>';
+      if (note) note.textContent = 'Détection des voix système…';
+      ASST.voices = await A.ttsStatus();
+    }
+    const status = ASST.voices;
+    if (status.available && status.voices.length) {
+      select.disabled = false;
+      select.innerHTML = status.voices.map((voice) => `<option value="${esc(voice.id)}" ${voice.id === status.default ? 'selected' : ''}>${esc(voice.label || voice.name || voice.id)}</option>`).join('');
+      if (toggle) { toggle.disabled = false; toggle.checked = true; }
+      if (note) note.textContent = `Voix système ${status.backend || status.channel || ''} · ${status.voices.length} disponible(s). Synthèse sur ce poste, sans clé ni réseau.`;
+    } else {
+      select.disabled = true;
+      select.innerHTML = '<option value="">Aucune voix système</option>';
+      if (toggle) { toggle.disabled = true; toggle.checked = false; }
+      if (note) note.textContent = status.reason || 'Voix indisponible dans cette édition. Les plans, titres et musique restent générés localement.';
+    }
+    updateAssistantPreview();
+  }
+
+  function assistantLog(message, detail) {
+    const log = $('#ed-asst-log');
+    if (!log) return;
+    const row = document.createElement('div');
+    row.innerHTML = `<span>${esc(message)}</span>${detail ? `<small>${esc(detail)}</small>` : ''}`;
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+    while (log.children.length > 40) log.removeChild(log.firstChild);
+  }
+
+  function setAssistantBusy(busy) {
+    ASST.busy = busy;
+    const generate = $('#ed-asst-generate');
+    const close = $('#ed-asst-close');
+    const cancel = $('#ed-asst-cancel');
+    if (generate) {
+      generate.disabled = busy;
+      generate.textContent = busy ? 'Génération…' : 'Générer le projet';
+    }
+    if (close) close.disabled = busy;
+    if (cancel) cancel.disabled = busy;
+  }
+
+  function openAssistant() {
+    if (!assistantModule()) { toast('Assistant projet indisponible : recharge la page.'); return; }
+    if (!S.project) return;
+    if (S.playing) pause();
+    const overlay = $('#ed-assistant-overlay');
+    if (!overlay) return;
+    overlay.hidden = false;
+    const subject = $('#ed-asst-subject');
+    if (subject) {
+      const clean = (value) => String(value || '').replace(/\s*·\s*\d+(?:[.,]\d+)?\s*s$/i, '').trim();
+      const current = clean(subject.value);
+      subject.value = current && subject.value !== 'Révélation Studio' ? current : clean(S.project.name) || 'Révélation Studio';
+    }
+    const log = $('#ed-asst-log');
+    if (log) log.innerHTML = '<div><span>Prêt.</span><small>Le montage actuel sera enregistré puis remplacé.</small></div>';
+    updateAssistantPreview();
+    refreshAssistantVoices().catch((error) => assistantLog('Voix indisponible', error.message));
+    if (subject) subject.focus();
+  }
+
+  function closeAssistant() {
+    if (ASST.busy) return;
+    const overlay = $('#ed-assistant-overlay');
+    if (overlay) overlay.hidden = true;
+  }
+
+  function bindAssistant() {
+    const overlay = $('#ed-assistant-overlay');
+    if (!overlay) return;
+    $('#ed-asst-close').onclick = closeAssistant;
+    $('#ed-asst-cancel').onclick = closeAssistant;
+    overlay.addEventListener('pointerdown', (event) => { if (event.target === overlay) closeAssistant(); });
+    $('#ed-asst-generate').onclick = generateAssistantProject;
+    for (const selector of ['#ed-asst-style', '#ed-asst-duration', '#ed-asst-subject', '#ed-asst-signature']) {
+      const node = $(selector);
+      if (node) {
+        node.addEventListener('input', scheduleAssistantPreview);
+        node.addEventListener('change', scheduleAssistantPreview);
+      }
+    }
+    for (const selector of ['#ed-asst-images', '#ed-asst-titles', '#ed-asst-music', '#ed-asst-voice-on']) {
+      const node = $(selector);
+      if (node) node.addEventListener('change', updateAssistantPreview);
+    }
+    const rate = $('#ed-asst-rate');
+    if (rate) {
+      rate.addEventListener('input', () => {
+        const label = $('#ed-asst-rate-value');
+        if (label) label.textContent = rate.value;
+      });
+    }
+    updateAssistantPreview();
+  }
+
+  async function generateAssistantProject() {
+    if (ASST.busy) return;
+    const A = assistantModule();
+    if (!A) { toast('Module assistant introuvable.'); return; }
+    const options = assistantOptions();
+    if (!options.images && !options.titles) { toast('Active au moins les plans ou les titres.'); return; }
+    if (S.project.clips.length && !window.confirm('Le montage actuel sera enregistré dans le stockage local puis remplacé par le film généré. Continuer ?')) return;
+    setAssistantBusy(true);
+    const started = performance.now();
+    try {
+      if (S.playing) pause();
+      assistantLog('Enregistrement du montage actuel');
+      await saveProject(false);
+      const plan = A.buildPlan(options);
+      const token = Date.now().toString(36).slice(-5).toUpperCase();
+      const prefix = `${plan.filePrefix}-${token}`;
+      assistantLog('Plan de montage', `${plan.shots.length} plans · ${M.timecode(plan.duration, plan.fps)} · ${plan.width}×${plan.height} · ${plan.styleLabel}`);
+      const files = [];
+      const images = [];
+      const overlays = [];
+      if (options.images) {
+        for (const shot of plan.shots) {
+          assistantLog(`Rendu du plan ${shot.number}/${plan.shots.length}`, `${shot.title} · motif ${shot.motif}`);
+          const canvas = document.createElement('canvas');
+          canvas.width = plan.width;
+          canvas.height = plan.height;
+          A.renderShot(canvas.getContext('2d'), {
+            style: plan.style, index: shot.index, seedText: plan.subject,
+            subject: plan.subject, seed: plan.seed
+          });
+          const blob = await canvasToBlob(canvas, 'image/png');
+          const name = `${prefix}-PLAN-${String(shot.number).padStart(2, '0')}.png`;
+          files.push(new File([blob], name, { type: 'image/png' }));
+          images.push({ shot, name });
+          await assistantYield();
+        }
+      }
+      if (options.titles) {
+        for (const shot of plan.shots) {
+          assistantLog(`Titre ${shot.number}/${plan.shots.length}`, shot.title);
+          const canvas = document.createElement('canvas');
+          canvas.width = plan.width;
+          canvas.height = plan.height;
+          A.renderOverlay(canvas.getContext('2d'), {
+            style: plan.style, subject: plan.subject, signature: plan.signature,
+            shot, total: plan.shots.length
+          });
+          const blob = await canvasToBlob(canvas, 'image/png');
+          const name = `${prefix}-TITRE-${String(shot.number).padStart(2, '0')}.png`;
+          files.push(new File([blob], name, { type: 'image/png' }));
+          overlays.push({ shot, name });
+          await assistantYield();
+        }
+      }
+      let music = null;
+      if (options.music) {
+        assistantLog('Composition de la musique', `${plan.duration.toFixed(1)} s · 48 kHz · stéréo`);
+        await assistantYield();
+        const cue = A.renderMusic({ duration: plan.duration, sampleRate: 48000, style: plan.style, seedText: plan.subject });
+        const wav = A.encodeWav(cue);
+        const name = `${prefix}-MUSIQUE.wav`;
+        files.push(new File([wav], name, { type: 'audio/wav' }));
+        music = { name };
+        assistantLog('Musique prête', `${formatBytes(wav.length)} · composition originale`);
+        await assistantYield();
+      }
+      const voices = [];
+      let voiceOn = options.voiceOn;
+      if (voiceOn) {
+        if (!ASST.voices) ASST.voices = await A.ttsStatus();
+        voiceOn = Boolean(ASST.voices.available && options.voice);
+        if (!voiceOn) assistantLog('Voix ignorée', ASST.voices.reason || 'Aucune voix système disponible.');
+      }
+      if (voiceOn) {
+        for (const line of plan.voices) {
+          assistantLog(`Voix ${line.shotId.slice(-2)}`, line.text);
+          try {
+            const result = await A.ttsRender({ text: line.text, voice: options.voice, rate: options.rate });
+            const name = `${prefix}-VOIX-${line.shotId.slice(-2)}.wav`;
+            files.push(new File([result.bytes], name, { type: result.mime || 'audio/wav' }));
+            voices.push({ line, name });
+            await assistantYield();
+          } catch (error) {
+            assistantLog('Voix interrompue', `${error.message} Le film continuera sans voix.`);
+            for (let index = files.length - 1; index >= 0; index -= 1) {
+              if (files[index].name.includes('-VOIX-')) files.splice(index, 1);
+            }
+            voices.length = 0;
+            voiceOn = false;
+            break;
+          }
+        }
+      }
+      assistantLog('Import des médias', `${files.length} fichiers dans le coffre local`);
+      const entries = await importFiles(files);
+      if (!entries || entries.length !== files.length) {
+        throw new Error(`Import incomplet : ${entries ? entries.length : 0} fichier(s) sur ${files.length}. Le montage actuel est conservé.`);
+      }
+      const byName = new Map(entries.map((entry) => [entry.name, entry]));
+      assistantLog('Assemblage de la timeline', 'images V1 · titres V2 · musique A1 · voix A2');
+      const next = M.createProject({ name: plan.defaultName, width: plan.width, height: plan.height, fps: plan.fps });
+      const add = (input) => M.addClip(next, { id: M.uid('clip'), ...input });
+      for (const item of images) {
+        const entry = byName.get(item.name);
+        if (!entry) throw new Error(`Média manquant : ${item.name}`);
+        add({
+          trackId: 'V1', kind: 'image', mediaId: entry.id, mediaName: entry.name,
+          name: `${item.shot.number} · ${item.shot.title}`,
+          start: item.shot.start, duration: item.shot.duration, in: 0,
+          mediaDuration: M.MAX_IMAGE_DURATION, fadeIn: 0.32, fadeOut: 0.32
+        });
+      }
+      for (const item of overlays) {
+        const entry = byName.get(item.name);
+        if (!entry) throw new Error(`Média manquant : ${item.name}`);
+        add({
+          trackId: 'V2', kind: 'image', mediaId: entry.id, mediaName: entry.name,
+          name: `Titre · ${item.shot.title}`,
+          start: item.shot.start, duration: item.shot.duration, in: 0,
+          mediaDuration: M.MAX_IMAGE_DURATION, fadeIn: 0.55, fadeOut: 0.55
+        });
+      }
+      if (music) {
+        const entry = byName.get(music.name);
+        if (!entry) throw new Error(`Média manquant : ${music.name}`);
+        const clipDuration = M.fitDuration(next, Math.min(plan.duration, entry.duration));
+        add({
+          trackId: 'A1', kind: 'audio', mediaId: entry.id, mediaName: entry.name,
+          name: 'Musique originale', start: 0, duration: clipDuration, in: 0,
+          mediaDuration: entry.duration, volume: 0.36, fadeIn: 1.2,
+          fadeOut: Math.min(3, clipDuration / 3)
+        });
+      }
+      for (const item of voices) {
+        const entry = byName.get(item.name);
+        if (!entry) throw new Error(`Média manquant : ${item.name}`);
+        const room = Math.max(0, item.line.duration - 0.3);
+        const clipDuration = M.fitDuration(next, Math.min(entry.duration, room));
+        if (clipDuration <= M.minDuration(next)) {
+          assistantLog('Voix trop courte', item.line.text);
+          continue;
+        }
+        if (entry.duration > room + 0.08) assistantLog('Voix rognée', `${entry.duration.toFixed(2)} s pour ${room.toFixed(2)} s`);
+        add({
+          trackId: 'A2', kind: 'audio', mediaId: entry.id, mediaName: entry.name,
+          name: `Voix · ${item.line.shotId.slice(-2)}`,
+          start: item.line.start + 0.15, duration: clipDuration, in: 0,
+          mediaDuration: entry.duration, volume: 0.95, fadeIn: 0.08, fadeOut: 0.18
+        });
+      }
+      if (!next.clips.length) throw new Error('Aucun clip n’a pu être assemblé.');
+      pause();
+      S.project = next;
+      S.selectedClipId = null;
+      S.playhead = 0;
+      S.history.reset();
+      await saveProject(false);
+      renderAll();
+      fitTimeline();
+      seek(0);
+      const elapsed = ((performance.now() - started) / 1000).toFixed(1);
+      assistantLog('Film assemblé', `${next.clips.length} clips · ${M.timecode(M.projectDuration(next), next.fps)} · ${elapsed} s`);
+      toast(`Projet généré : ${next.clips.length} clips sur la timeline. Espace pour visionner, puis Exporter la vidéo.`);
+      setAssistantBusy(false);
+      setTimeout(() => { if (!ASST.busy) closeAssistant(); }, 850);
+      return next;
+    } catch (error) {
+      assistantLog('Génération interrompue', error.message);
+      toast(`Assistant projet : ${error.message}`);
+      setAssistantBusy(false);
+      return null;
+    }
+  }
+
   function bindTopbar() {
     $$('[data-ed]').forEach((button) => {
       button.onclick = () => {
@@ -2057,6 +2458,7 @@
         else if (action === 'save') saveProject(true).catch((error) => toast(error.message));
         else if (action === 'open-project') $('#ed-project-file').click();
         else if (action === 'export-project') exportProjectJSON();
+        else if (action === 'assistant') openAssistant();
         else if (action === 'export') exportVideo();
         else if (action === 'add-video') addTrack('video');
         else if (action === 'add-audio') addTrack('audio');
@@ -2192,6 +2594,7 @@
       if (token !== S.mountToken) return;
       container.innerHTML = template();
       bindTopbar();
+      bindAssistant();
       bindKeyboard();
       renderAll();
       if (!S.project.clips.length) {
@@ -2240,7 +2643,9 @@
     S.history.reset();
     S.container = null;
     S.dirty = false;
+    ASST.busy = false;
     clearTimeout(S.saveTimer);
+    clearTimeout(ASST.previewTimer);
   }
 
   window.StudioEditor = {
@@ -2259,6 +2664,6 @@
       openProjectPicker: () => { const input = $('#ed-project-file'); if (input) input.click(); },
       exportProjectJSON
     },
-    _debug: { state: S, M, importFiles }
+    _debug: { state: S, M, importFiles, assistant: { generate: generateAssistantProject, open: openAssistant, options: assistantOptions } }
   };
 })();

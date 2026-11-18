@@ -180,3 +180,20 @@ Le bandeau et la page **IA & quotas** affichent l'état réel, pas un décor :
 - **Générations vérifiées** : au moins un test réel réussi.
 
 Dans le profil audité le 2026-11-17, seules les clés **Tripo** et **Kling** sont présentes. Tripo confirme l'accès mais affiche **0 crédit** ; Kling confirme l'accès. Les autres fournisseurs, dont **FreeLLMAPI**, restent configurables mais ne sont pas connectés. Le détail est dans [08_IA_ET_COMPTES.md](08_IA_ET_COMPTES.md).
+
+## 15. Assistant projet — fabriquer un film complet dans le Studio
+
+1. Ouvrir **Montage**, puis **Assistant projet** dans la barre d'outils.
+2. Choisir le **style** (Ambre, Acier, Nuit, Néon), la **durée** (12 à 120 s), le **sujet**, la **signature finale** et la **voix**.
+3. Laisser cochés **plans cinématiques**, **titres transparents**, **musique originale** et **voix off**. L'aperçu de droite est un rendu réel du premier plan et de son titre.
+4. Cliquer **Générer le projet**. Le journal indique chaque étape : rendu des six plans, titres, musique, six phrases de voix, import, assemblage.
+5. Le Studio crée un nouveau montage : six images sur **V1**, six titres sur **V2**, la musique sur **A1**, les voix sur **A2**. La durée est exacte (ex. 30,000 s à 30 i/s).
+6. Lire avec `Espace`, retoucher les clips si besoin, puis **Exporter la vidéo**.
+
+Les voix utilisées sont celles du système :
+
+- macOS : `say` puis conversion WAV par `afconvert` ;
+- Windows : PowerShell + `System.Speech` (SAPI) ;
+- Linux : `espeak-ng`.
+
+Aucune clé, aucun compte et aucune connexion réseau ne sont nécessaires. Si le poste ne propose aucune voix, le film est tout de même assemblé avec images, titres et musique, et le journal explique pourquoi la voix manque. L'édition web autonome sans pont système suit la même règle.

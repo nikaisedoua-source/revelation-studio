@@ -12,4 +12,10 @@ contextBridge.exposeInMainWorld('StudioDesktop', {
     timeoutMs: payload && payload.timeoutMs,
   }),
   openExternal: (url) => ipcRenderer.invoke('studio:open-external', String(url || '')),
+  ttsVoices: () => ipcRenderer.invoke('studio:tts-voices'),
+  ttsRender: (payload) => ipcRenderer.invoke('studio:tts-render', {
+    text: payload && payload.text,
+    voice: payload && payload.voice,
+    rate: payload && payload.rate,
+  }),
 });

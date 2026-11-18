@@ -1,7 +1,7 @@
 # Tests et preuves
 
 Machine de vérification : macOS arm64, Node v24.18.0, Electron 45.3.4.
-Date : 2026-11-17.
+Version courante : **0.12.0** (2026-11-18). La section 1 conserve les résultats 0.11.1 ; la section 2 documente la passe courante.
 
 ## 1. Tests automatisés
 
@@ -543,3 +543,76 @@ npm run dist:mac
 | `release/Revelation-Studio-0.11.1-arm64.zip` | 117 321 695 octets | `64cefca62edaf53bc1da82a73a9c8177c806bcd75d810335f364f8f7e749bd47` |
 
 Le binaire packagé a été lancé avec `REVELATION_PORT=41912` : **HTTP 200** et `version.json` a renvoyé `0.11.1`. Le processus a été arrêté ensuite. Le paquet reste non signé/non notarié.
+
+## 2. Version 0.12.0 — assistant intégré et voix système
+
+Machine : macOS arm64, Node v24.18.0, Electron 45.3.4. Date : 2026-11-18.
+
+```sh
+npm test          # 45 tests Node, 0 échec
+npm run verify    # syntaxe + 45 tests + build web
+```
+
+Nouveaux tests (`tests/project_assistant_test.cjs`) :
+
+- plan de 30 s à 25 i/s : 6 plans, 750 frames, commence à 0 ;
+- durée non divisible (31 s à 25 i/s) : total exact de 775 frames ;
+- déterminisme du PRNG et changement avec le sujet ;
+- repli des styles inconnus et des durées hors bornes ;
+- musique stéréo finie, longueur = durée × fréquence ;
+- en-tête RIFF/WAVE, canaux, fréquence, taille des données ;
+- rendu des **six motifs × quatre styles** sans couleur indéfinie (régression `filmFrame`) ;
+- statut TTS toujours honnête (booléen + raison si indisponible).
+
+Preuves dans l'application réelle (Electron, profil neuf, port de test) :
+
+| Vérification | Résultat |
+| --- | --- |
+| Voix détectées | 70, voix par défaut `Jacques` (fr_FR) |
+| Génération complète | 6,9 s pour 30 s de film |
+| Timeline | 19 clips : 6 V1, 6 V2, 1 A1, 6 A2 |
+| Durée | 30,000 s à 30 i/s |
+| Lecture | timecode avance, 7 médias audio `readyState = 4` |
+| Export | MP4 16 490 444 octets, `ftyp isom` |
+| Sortie audio | 1 piste dans le flux MediaRecorder |
+| SHA-256 du MP4 | `0ab5fe202806ac005341daf44326b4033b466189bbc3fc33e03acb90486a5340` |
+
+Le MP4 a été capturé depuis le blob réel produit par l'export, sans dialogue de sauvegarde, pour automatiser la vérification. Le hash et l'en-tête prouvent un fichier vidéo effectivement encodé.
+
+Captures : `TRAVAIL/preuves/0.12.0-assistant.png`, `TRAVAIL/preuves/0.12.0-timeline-30s.png`.
+
+Vérification de la synthèse système hors application :
+
+```sh
+python3 -c "from app import system_tts; import base64; r=system_tts.render({'text':'Le studio fonctionne sans sortir du logiciel.','voice':'Jacques','rate':175}); d=base64.b64decode(r['data']); print(r['mime'], r['voice'], r['backend'], r['bytes'], d[:4], d[8:12])"
+# audio/wav Jacques macos 247692 b'RIFF' b'WAVE'
+```
+
+### 2.1 Paquet macOS 0.12.0
+
+```sh
+npm run dist:mac
+```
+
+| Fichier | Taille | SHA-256 |
+| --- | --- | --- |
+| `release/Revelation-Studio-0.12.0-arm64.dmg` | 120 854 603 octets | `9a59b4a9cf6a2bcc4dd3a788770a95a0de549b2fe2ca5ee09c305a2cd419ccc7` |
+| `release/Revelation-Studio-0.12.0-arm64.zip` | 117 338 754 octets | `b77f15c3bbf6d56aef035fb71c93efedea7b30e820c14fc2f7d48ef0a4b63192` |
+
+Contrôles dans le paquet :
+
+- `release/mac-arm64/Revelation Studio.app/Contents/Resources/app.asar` contient `desktop/system-tts.cjs` et les 27 fichiers du build web, dont `web-online/dist/project-assistant.js` ;
+- le fichier `project-assistant.js` extrait de l'asar est **octet pour octet identique** à `web/project-assistant.js` ;
+- application packagée lancée avec `--remote-debugging-port`, profil neuf : `StudioDesktop.ttsVoices` et `StudioDesktop.ttsRender` présents ;
+- `ttsVoices()` renvoie `available: true`, backend `macos`, **70 voix** ;
+- `ttsRender({text, voice:'Jacques', rate:180})` renvoie `audio/wav`, backend `macos`, **266 060 octets**, en-tête base64 décodé `RIFF…WAVE`.
+
+Hashes des sources livrées :
+
+| Fichier | SHA-256 |
+| --- | --- |
+| `web/project-assistant.js` | `57f5672a113b0e6d424bdf448b84fc302038256422a20d23261aef6fabfce8e8` |
+| `desktop/system-tts.cjs` | `ff324981ac91ffd6615d39290c1343d399f2fa0518e552f9622a4a528d48f8b9` |
+| `app/system_tts.py` | `74b87043758723eaedb800dbc15cd9833c9c212cc6bf83c9096a7541a4f3f89a` |
+
+Le paquet reste non signé/non notarié (aucune identité Developer ID sur la machine).

@@ -1,7 +1,7 @@
 # Révélation Studio — dossier de travail
 
-Version documentée : **0.11.1**
-Date de cette passe : **2026-11-17**
+Version documentée : **0.12.0**
+Date de cette passe : **2026-11-18**
 Dossier de code : `REVELATION_STUDIO/`
 
 Ce dossier explique ce qui a été construit, pourquoi, comment le vérifier et ce qui reste limité. Il s'adresse à toute personne qui reprend le code sans avoir participé à la session.
@@ -36,6 +36,7 @@ Ce dossier explique ce qui a été construit, pourquoi, comment le vérifier et 
   1. site statique / PWA installable (`web-online/dist/`) ;
   2. application Electron macOS/Windows/Linux (`desktop/`) ;
   3. serveur Python local historique pour les fonctions natives Mac (`app/`).
+- **Assistant projet intégré** : `web/project-assistant.js` + fenêtre **Assistant projet** dans Montage. Six plans, titres, musique et voix système, puis assemblage V1/V2/A1/A2 et export, sans quitter l’application. Voir [05_GUIDE_MONTAGE.md](05_GUIDE_MONTAGE.md).
 - **Coffre local chiffré** : IndexedDB + PBKDF2-SHA256 (310 000 itérations) + AES-GCM. Les clés et projets ne partent pas vers un serveur applicatif.
 - **Fournisseurs IA** : adaptateurs officiels + **FreeLLMAPI** configurable via une passerelle OpenAI-compatible (`FREELLMAPI_BASE_URL`, `FREELLMAPI_API_KEY`, `FREELLMAPI_MODEL`) + **Ollama local** réellement interrogeable.
 - **État IA honnête** : voir [08_IA_ET_COMPTES.md](08_IA_ET_COMPTES.md). Dans le profil audité, seules les clés Tripo et Kling sont présentes ; Tripo répond avec **0 crédit**, Kling confirme l'accès. Ollama fonctionne localement (2 modèles). Les autres moteurs restent câblés mais attendent une clé.
@@ -48,7 +49,7 @@ npm install                 # Electron et electron-builder
 
 npm run web:build           # construit web-online/dist/
 npm run desktop             # construit puis lance l'application Electron
-npm test                    # 36 tests Node
+npm test                    # 45 tests Node
 npm run verify              # syntaxe + tests + build
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 29 tests Python
 npm run dist:mac            # .dmg et .zip macOS
