@@ -616,3 +616,17 @@ Hashes des sources livrées :
 | `app/system_tts.py` | `74b87043758723eaedb800dbc15cd9833c9c212cc6bf83c9096a7541a4f3f89a` |
 
 Le paquet reste non signé/non notarié (aucune identité Developer ID sur la machine).
+
+### 2.2 Version web publique
+
+| Vérification | Résultat |
+| --- | --- |
+| Workflow | `Mettre la version web en ligne`, exécution `44265034607`, build et deploy verts |
+| URL | https://nikaisedoua-source.github.io/revelation-studio/ |
+| `version.json` | `0.12.0`, édition `browser` |
+| Module assistant | `window.StudioProjectAssistant` = objet chargé |
+| Service worker | actif, portée `/revelation-studio/`, cache `revelation-web-0.12.0` |
+| Console | aucune erreur |
+| Parcours | coffre créé sur l'origine publique, espace de travail puis Montage avec V2/V1/A1/A2 |
+
+Le déploiement se refait automatiquement à chaque poussée sur `main` via `.github/workflows/pages.yml`.

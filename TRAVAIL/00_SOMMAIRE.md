@@ -3,6 +3,7 @@
 Version documentée : **0.12.0**
 Date de cette passe : **2026-11-18**
 Dossier de code : `REVELATION_STUDIO/`
+Version web en ligne : **https://nikaisedoua-source.github.io/revelation-studio/**
 
 Ce dossier explique ce qui a été construit, pourquoi, comment le vérifier et ce qui reste limité. Il s'adresse à toute personne qui reprend le code sans avoir participé à la session.
 
