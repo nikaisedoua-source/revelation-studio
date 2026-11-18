@@ -15,15 +15,16 @@ Version 0.12.0 — scénario, storyboard, motion design, **montage vidéo multip
 - **Édition navigateur / PWA** : atelier film, références, historique, exports de projet, aperçu motion vidéo, animatique d’images et sources modifiables. Les projets restent dans un coffre chiffré propre au navigateur.
 - **Applications Electron** : le même socle web est servi localement, avec un proxy réseau dans le processus principal pour joindre les API sans contrainte CORS.
 
-La version web privée est hébergée séparément du dépôt de code. Aucun projet personnel, mot de passe, média ou poids IA n’est inclus dans ce dépôt.
+La version web publique est déployée par GitHub Pages ; chaque navigateur garde son propre coffre chiffré. Aucun projet personnel, mot de passe, média ou poids IA n’est inclus dans ce dépôt.
 
 **Documentation de construction et de vérification : [TRAVAIL/00_SOMMAIRE.md](TRAVAIL/00_SOMMAIRE.md).**
 
-## Télécharger
+## Télécharger et utiliser
 
-Dernière version macOS (Apple Silicon) : **[Release v0.12.0](https://github.com/nikaisedoua-source/revelation-studio/releases/latest)** — DMG et ZIP.
+- **Version web en ligne** : https://nikaisedoua-source.github.io/revelation-studio/ — le coffre reste chiffré dans le navigateur. La voix système et les ponts locaux nécessitent l'application de bureau ou le serveur Python.
+- **macOS (Apple Silicon)** : **[Release v0.12.0](https://github.com/nikaisedoua-source/revelation-studio/releases/latest)** — DMG et ZIP.
 
-Le paquet n'est ni signé ni notarié : au premier lancement, utiliser clic droit → **Ouvrir**, ou autoriser l'application dans Réglages Système → Confidentialité et sécurité. Les empreintes SHA-256 sont publiées dans les notes de version.
+Le paquet macOS n'est ni signé ni notarié : au premier lancement, utiliser clic droit → **Ouvrir**, ou autoriser l'application dans Réglages Système → Confidentialité et sécurité. Les empreintes SHA-256 sont publiées dans les notes de version.
 
 ## Démarrer sur Mac
 
